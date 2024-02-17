@@ -1,4 +1,4 @@
-# Roll-Dice
+# Roll Dice
 Allows the user to set: 
   1) an arbitrary probability distrubtion for a six-sided die,
   2)  the number of dice to throw per roll, and
