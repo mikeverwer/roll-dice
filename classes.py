@@ -81,6 +81,7 @@ class mainframe:
         self.preset_list.append(new_preset)
         self.presets[new_preset] = self.die_distribution
         self.window['preset'].update(values=self.preset_list)
+        print(f"[LOG] New Preset added.\n{new_preset} : {self.presets[new_preset]}")
 
     
     def activate_lock(self, active_lock):

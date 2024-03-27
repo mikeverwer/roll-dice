@@ -34,11 +34,11 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
                     ], relief='raised', background_color='light cyan'), sg.Push()
                 ],
                 slider_columns,
-                [sg.Text('_' * 55)],
-                [sg.Text('Preset Distributions'), sg.Combo(frame.preset_list, default_value=None, size=(15, 10),
-                                                            enable_events=True, readonly=True, k='preset'),
-                sg.Text(' ' * 8),
-                sg.Button('Randomize', button_color='cyan')],
+                [sg.Text('_' * 57)],
+                [sg.Push(), sg.Text('Preset Distributions'), sg.Combo(frame.preset_list, default_value=None, size=(10, 10),
+                                                            enable_events=True, readonly=False, k='preset'),
+                sg.Button("Add", k='add preset', p=((0, 50), (0, 0))),
+                sg.Button('Randomize', button_color='cyan'), sg.Push()],
                 [sg.Text('', font='Courier 1')],
             ], font='Helvetica 12 bold',)
         ],
@@ -96,6 +96,5 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
     # Hotkeys
     # ----------------------------------------------------------------------------------------------------------------------
-
     return window
     

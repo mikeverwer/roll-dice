@@ -198,6 +198,9 @@ def main():
             set_to_preset = mf.values[event]
             mf.set_sliders_to(mf.presets[set_to_preset], reset_locks=True)
 
+        elif event == 'add preset' and mf.values['preset'] != '':
+            mf.add_preset(mf.values['preset'])
+
         elif event.startswith('input'):
             active_face = int(event[-1])
             previous_values = [mf.values[f'face{i}'] for i in range(1, 7)]
