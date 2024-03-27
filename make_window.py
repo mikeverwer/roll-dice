@@ -1,6 +1,7 @@
 from types import ModuleType
+from classes import mainframe
 
-def mainframe(sg: ModuleType, images: dict, theme, values):
+def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     sg.theme(theme)
     graph_dimensions = {
         'x': 1000,
@@ -15,13 +16,11 @@ def mainframe(sg: ModuleType, images: dict, theme, values):
     for i in range(1, 7):
         image = sg.Button(image_data=images[f'die{i}'], enable_events=True, key=f'lock{i}')
         slider = sg.Slider(range=(0, 100), orientation='v', size=(5, 20), enable_events=True,  # was (5, 20)
-                           default_value=values['die_distribution'][i - 1], key=f'face{i}')
+                           default_value=frame.die_distribution[i - 1], key=f'face{i}')
         column = sg.Column([[image], [slider]], element_justification='right')
         slider_columns.append(column)
 
-    
-    mean = values['mean']
-    deviation = values['deviation']
+
     grid_layout = [
         [sg.Text('The Central Limit Theorem      ', font=("Helvetica", 25))],
         [sg.Text('This program showcases the Central Limit Theorem from probability theory.\n\n'
@@ -30,13 +29,13 @@ def mainframe(sg: ModuleType, images: dict, theme, values):
         [sg.Frame('Dice Distribution  |  Click on a die face to lock its value', layout=[
                 [sg.Push(),
                 sg.Frame('', layout=[
-                    [sg.Text(f'Mean: {mean:.2f}', font='helvetica 10 bold', background_color='light cyan', k='mean'),
-                    sg.Text(f'Standard Deviation: {deviation:.2f}', k='deviation', font='helvetica 10 bold', background_color='light cyan')]
+                    [sg.Text(f'Mean: {frame.mean:.2f}', font='helvetica 10 bold', background_color='light cyan', k='mean'),
+                    sg.Text(f'Standard Deviation: {frame.deviation:.2f}', k='deviation', font='helvetica 10 bold', background_color='light cyan')]
                     ], relief='raised', background_color='light cyan'), sg.Push()
                 ],
                 slider_columns,
                 [sg.Text('_' * 55)],
-                [sg.Text('Preset Distributions'), sg.Combo(values['preset_list'], default_value=None, size=(15, 10),
+                [sg.Text('Preset Distributions'), sg.Combo(frame.preset_list, default_value=None, size=(15, 10),
                                                             enable_events=True, readonly=True, k='preset'),
                 sg.Text(' ' * 8),
                 sg.Button('Randomize', button_color='cyan')],
@@ -44,10 +43,10 @@ def mainframe(sg: ModuleType, images: dict, theme, values):
             ], font='Helvetica 12 bold',)
         ],
         [sg.Text('', font='Courier 1')],
-        [sg.Text('Number of dice to roll: '), sg.Input(s=4, default_text=values['dice'], justification='right', k='dice'),
+        [sg.Text('Number of dice to roll: '), sg.Input(s=4, default_text=3, justification='right', k='dice'),
          sg.Column([
-             [sg.Button(image_filename='assets/up.png', key='up')],
-             [sg.Button(image_filename='assets/down.png', key='down')]
+             [sg.Button(image_data=frame.images['up'], key='up')],
+             [sg.Button(image_data=frame.images['down'], key='down')]
          ], element_justification="left"),
          sg.Text('Number of rolls: '), sg.Input(s=9, default_text=100, k='rolls')],
         [sg.Text(' ' * 6), sg.Button('Show Sum Distribution', k='theory_button', border_width=2, size=(10, 2),
@@ -58,7 +57,7 @@ def mainframe(sg: ModuleType, images: dict, theme, values):
     ]
 
     logging_layout = [
-        [sg.Text(values['logging_UI_text'], font='Courier 10', justification='left', k='outcome_UI_text'), sg.Push()],
+        [sg.Text(frame.logging_UI_text, font='Courier 10', justification='left', k='outcome_UI_text'), sg.Push()],
         [sg.Push(),
          sg.Multiline(size=(54, 15),
                       default_text='All the roll outcomes will be printed here!\nThe values describe how often each face appeared.\n',

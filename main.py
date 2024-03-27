@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 import make_window as make
+from classes import mainframe
 
 matplotlib.use('TkAgg')
 
@@ -32,35 +33,6 @@ images = {
 # ----------------------------------------------------------------------------------------------------------------------
 # Functions for calculations
 # ----------------------------------------------------------------------------------------------------------------------
-def random_distribution(locks=None, locked_values=None, locked_sum=0):
-    if locked_values is None:
-        locked_values = [0] * 6
-    if locks is None:
-        locks = [False] * 6
-
-    sum_to = 100 - locked_sum
-    random_values = []
-    for locked in locks:
-        if not locked:
-            random_values.append(random.random())
-    total = sum(random_values)
-    normalized_values = [int((sum_to * value) / total) for value in random_values]
-    normalized_values[-1] = int(sum_to - sum(normalized_values[:-1]))
-    valid_distribution = []
-    lock_counter = 0
-    unlock_counter = 0
-    for locked in locks:
-        if locked:
-            valid_distribution.append(int(locked_values[lock_counter]))
-        else:
-            valid_distribution.append(normalized_values[unlock_counter])
-            unlock_counter += 1
-
-        lock_counter += 1
-
-    return valid_distribution
-
-
 def roll_dice(k, n, distribution=None):
     # rolls k dice, n times; then counts the face outcomes of the k rolls for each trial and sums them
     # we then count the frequency of each face over all n trials
@@ -167,175 +139,36 @@ def clear_canvas(canvas_agg):
 
 
 def main():
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Functions
-    # ----------------------------------------------------------------------------------------------------------------------
-
-    def mean_and_deviation(distribution, update=True, get=False):
-        if abs(sum(distribution) - 100) <= 5:
-            # Convert a distribution given in percentages to decimal
-            valid_distribution = [item / 100 for item in distribution]
-            valid_distribution[-1] = 1 - sum(valid_distribution[:-1])
-            distribution = valid_distribution
-
-        mean = 0
-        for x in range(6):
-            mean += (x + 1) * distribution[x]
-        variance = 0
-        for x in range(1, 7):
-            variance += distribution[x - 1] * ((x - mean) ** 2)
-        standard_deviation = variance ** .5
-        if update:
-            values['mean'], values['deviation'] = mean, standard_deviation
-            window['mean'].update(f'Mean: {mean:.2f}')
-            window['deviation'].update(f'Standard Deviation: {standard_deviation:.2f}')
-        if get is True:
-            return mean, standard_deviation
-
-    def set_sliders_to(slider_values, reset_locks=False):
-        for i in range(1, 7):  # Update sliders and locks
-            if values['locked_bools'][i - 1] and reset_locks is True:  # Reset locks
-                values['locked_bools'][i - 1] ^= True
-                window[f'lock{i}'].update(image_filename=f'assets/die{active_lock}.png')
-            values[f'face{i}'] = slider_values[i - 1]
-            window[f'face{i}'].update(values[f'face{i}'])
-
-        mean_and_deviation(slider_values)
-
-    def activate_slider(event, values, set_to_value=None):
-        if set_to_value is None:
-            set_to_value = values[event]
-        active_face = int(event[-1])
-        values[event] = set_to_value
-
-        if not values['locked_bools'][active_face - 1]:  # If the face is not locked, accept and adjust other faces
-            active_slider_key = event
-            active_slider_value = values[event]
-            slider_values = [values[f'face{i}'] for i in range(1, 7)]
-            total = sum(slider_values)
-            locked_sum = 0
-            for i in range(1, 7):
-                if values['locked_bools'][i - 1]:
-                    locked_sum += values[f'face{i}']
-            unlocked_sum = total - active_slider_value - locked_sum
-
-            if total != 100 and unlocked_sum != 0:
-                # Calculate the scaling factor to preserve the relative positions
-                scaling_factor = (100 - active_slider_value - locked_sum) / unlocked_sum
-
-                # Scale all sliders while preserving relative positions
-                for i in range(1, 7):
-                    if active_slider_key == f'face{i}' or values['locked_bools'][i - 1]:
-                        # Skip the actively modified or locked slider
-                        continue
-                    else:
-                        slider_values[i - 1] = int(slider_values[i - 1] * scaling_factor)
-                        window[f'face{i}'].update(slider_values[i - 1])
-
-                # Adjust active slider to ensure the sum is 100
-                total = sum(slider_values)
-                if total != 100 and total != 0:
-                    adjustment = 100 - total
-                    slider_values[active_face - 1] += adjustment
-                    window[active_slider_key].update(slider_values[active_face - 1])
-
-            elif unlocked_sum == 0 and total < 100:
-                next_unlocked_face = None
-                # The unlocked sliders were all 0 and the active slider was reduced; increase an unlocked slider
-                for i in range(1, 6):
-                    # Find an unlocked slider. If there are none, lock the active slider
-                    next_face = ((active_face - 1) + i) % 6
-                    if values['locked_bools'][next_face]:  # Skip locked sliders
-                        next_unlocked_face = None
-                        continue
-                    else:
-                        next_unlocked_face = next_face + 1
-                        break
-
-                if next_unlocked_face is None:  # No unlocked faces were found; lock active face
-                    adjustment = 100 - total
-                    slider_values[active_face - 1] += adjustment
-                    window[active_slider_key].update(slider_values[active_face - 1])
-                else:
-                    values[f'face{next_unlocked_face}'] = 100 - active_slider_value
-                    window[f'face{next_unlocked_face}'].update(values[f'face{next_unlocked_face}'])
-
-            elif unlocked_sum == 0 and total > 100:
-                #  The unlocked sliders were all 0 and the active slider was increased; decrease active slider
-                adjustment = 100 - total
-                slider_values[active_face - 1] += adjustment
-                window[active_slider_key].update(slider_values[active_face - 1])
-
-            mean_and_deviation(slider_values)
-            die_distribution = [_ / 100 for _ in slider_values]
-
-        else:  # Slider is locked, keep value constant
-            values[event] = values['locked_values'][int(event[-1]) - 1]
-            window[event].update(values[event])
-
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Initialize variables
-    # ----------------------------------------------------------------------------------------------------------------------
-    def get_values(window, values):
-        values['locked_values'][active_lock - 1] = values[f'face{active_lock}']
-        values['locked_bools'][active_lock - 1] = not values['locked_bools'][active_lock - 1]
-        values['die_distribution'] = [values[f'face{i}'] for i in range(1, 7)]
-        mean_and_deviation(values['die_distribution'])
-
-        return values
-
-    
-    def add_to_values(window=None, values: dict = None, initialize=False):
-        if window is None:
-            initialize=True
-        if values is None:
-            values = {}
-        if initialize:
-            values['locked_values'] = [0] * 6
-            values['locked_bools'] = [False] * 6
-            values['preset_list'] = ['Fair', 'Sloped', 'Valley', 'Hill']
-            values['die_distribution'] = random_distribution()
-            values['mean'], values['deviation'] = mean_and_deviation([value / 100 for value in values['die_distribution']], get=True, update=False)
-            values['dice'] = 3
-            values['extra_space'] = 0
-            values['logging_UI_text'] = ' '
-            return values
-        else:
-            values = get_values(window=window, values=values)
-            return values
-    
-    
-    sg.theme('Default1')
-
-    # ----------------------------------------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------------------------------------------------
     # Initialize Window
-    # ----------------------------------------------------------------------------------------------------------------------
-    values = add_to_values(initialize=True)
-    window = make.mainframe(sg, images, theme='Default1', values=values)
+    # ---------------------------------------------------------------------------------------------------------------------
+    sg.theme('Default1')
+    mf = mainframe(images)  # MainFrame object, see classes.py
+    window = make.mainframe(sg, images, theme='Default1', frame=mf)
+    mf.window = window
 
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
+    dice = 3
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Event Loop
     # ----------------------------------------------------------------------------------------------------------------------
 
-    update_interval = 1
     while True:
-        event, values = window.read(timeout = 1000 // update_interval)
-        add_to_values(values)
+        event, mf.values = mf.window.read(timeout = 1000 // mf.update_interval)
 
         if event in (None, 'Exit'):
             break
 
         elif event == 'About':
-            window['log'].update(value='')
+            mf.window['log'].update(value='')
             print('Created by: \nMike Verwer; M.Sc. Mathematics, McMaster University.\n2023\n',
                   '\nMade in Python with the PySimpleGUI library and matplotlib.\n',
                   '\nIntended for use in Math 10064 @ Mohawk College')
 
         elif event == 'The CLT':
-            window['log'].update(value='')
+            mf.window['log'].update(value='')
             print('Suppose you are running an experiment in which the outcomes have an arbitrary probability '
                   'distribution (just like the dice in this program).\n',
                   '\nSimply put, the Central Limit Theorem says that if you run this experiment \'N\' times, then'
@@ -346,145 +179,122 @@ def main():
 
         elif event == 'SaveSettings':
             filename = sg.popup_get_file('Save Settings', save_as=True, no_window=True)
-            window.SaveToDisk(filename)
+            mf.window.SaveToDisk(filename)
             # save(values)
         elif event == 'LoadSettings':
             filename = sg.popup_get_file('Load Settings', no_window=True)
-            window.LoadFromDisk(filename)
+            mf.window.LoadFromDisk(filename)
             # load(form)
 
         elif event.startswith('face'):
             active_face = int(event[-1])
-            activate_slider(f'face{active_face}', values)
+            mf.activate_slider(event=event)
 
         elif event.startswith('lock'):
             active_lock = int(event[-1])
-            values['locked_values'][active_lock - 1] = values[f'face{active_lock}']
-            values['locked_bools'][active_lock - 1] = not values['locked_bools'][active_lock - 1]
-            if values['locked_bools'][active_lock - 1]:
-                window[f'lock{active_lock}'].update(image_filename=f'assets/lock{active_lock}.png')
-            else:
-                window[f'lock{active_lock}'].update(image_filename=f'assets/die{active_lock}.png')
+            mf.activate_lock(active_lock)
 
         elif event == 'preset':
-            if values[event] == 'Fair':
-                set_faces = [float(100 / 6), float(100 / 6), float(100 / 6), float(100 / 6), float(100 / 6),
-                             100 - float(500 / 6)]
-                set_sliders_to(set_faces, reset_locks=True)
-
-            elif values[event] == 'Sloped':
-                set_faces = [47, 23, 16, 8, 4, 2]
-                set_sliders_to(set_faces, reset_locks=True)
-
-            elif values[event] == 'Valley':
-                set_faces = [40, 8, 2, 3, 9, 38]
-                set_sliders_to(set_faces, reset_locks=True)
-
-            elif values[event] == 'Hill':
-                set_faces = [2, 12, 40, 38, 7, 1]
-                set_sliders_to(set_faces, reset_locks=True)
+            set_to_preset = mf.values[event]
+            mf.set_sliders_to(mf.presets[set_to_preset], reset_locks=True)
 
         elif event.startswith('input'):
             active_face = int(event[-1])
-            previous_values = [values[f'face{i}'] for i in range(1, 7)]
-            input_value = values[event][:-1]
+            previous_values = [mf.values[f'face{i}'] for i in range(1, 7)]
+            input_value = mf.values[event][:-1]
             try:
                 active_face_value = float(input_value)
-                activate_slider(f'face{active_face}', values, active_face_value)
+                mf.activate_slider(f'face{active_face}', mf.values, active_face_value)
             except ValueError:
-                if values[event] != '':
+                if mf.values[event] != '':
                     sg.popup('Enter a number', title='Error')
-                elif values[event] == '':
-                    set_sliders_to(previous_values)
+                elif mf.values[event] == '':
+                    mf.set_sliders_to(previous_values)
 
         elif event == 'Randomize':
-            #  Find out which sliders are currently locked and find the sum of the locked sliders
-            locked_sum = 0
-            for i in range(1, 7):
-                if values['locked_bools'][i - 1]:
-                    locked_sum += values[f'face{i}']
-            if False in values['locked_bools']:  # At least 1 slider is unlocked
-                die_distribution = random_distribution(values['locked_bools'], values['locked_values'], locked_sum)
-                set_sliders_to(die_distribution)
+            if False in mf.locks:  # At least 1 slider is unlocked
+                mf.die_distribution = mf.random_distribution(get_var=True)
+                mf.set_sliders_to(mf.die_distribution)
 
-            die_distribution = [values[f'face{i}'] for i in range(1, 7)]
-            mean_and_deviation(die_distribution, update=True, get=False)
+            mf.die_distribution = [mf.values[f'face{i}'] for i in range(1, 7)]
+            mf.mean_and_deviation(update=True)
 
         elif event == 'up' or event == 'down':
             if event == 'up':
-                values['dice'] = int(values['dice']) + 1
-                window['dice'].update(values['dice'])
+                new_dice = int(mf.values['dice']) + 1
+                mf.values['dice'] = new_dice
+                mf.window['dice'].update(value=new_dice)
             else:
-                values['dice'] = int(values['dice']) - 1 if int(values['dice']) > 1 else 1
-                window['dice'].update(values['dice'])
+                new_dice = int(mf.values['dice']) - 1 if int(mf.values['dice']) > 1 else 1
+                mf.values['dice'] = new_dice
+                mf.window['dice'].update(value=new_dice)
 
         elif event == 'theory_button':  # Make the theoretical distribution plot
             # Get the number of dice to roll
             try:
-                previous_distribution = die_distribution
+                previous_distribution = mf.die_distribution
                 previous_dice = dice
-                dice = int(values['dice'])
-
-                die_distribution = [values[f'face{i}'] / 100 for i in range(1, 7)]
-                mean, deviation = mean_and_deviation(die_distribution, get=True, update=False)
+                dice = int(mf.values['dice'])
+                mf.die_distribution = [mf.values[f'face{i}'] / 100 for i in range(1, 7)]
+                mf.mean_and_deviation(update=True)
 
                 # Convolve the single die distribution with itself 'dice' times
                 # to find the probability distribution of rolling all the desired dice
-                convoluted_distribution = die_distribution
+                convoluted_distribution = mf.die_distribution
                 for _ in range(dice - 1):
-                    convoluted_distribution = np.convolve(convoluted_distribution, die_distribution)
+                    convoluted_distribution = np.convolve(convoluted_distribution, mf.die_distribution)
 
                 # Create plot of theoretical distribution
                 plt.figure(figsize=(10, 4))
                 # create_dice_distribution_plot(die_distribution, face_totals, die_mean, die_standard_deviation)
-                create_convoluted_distribution_plot(convoluted_distribution, dice, dice * mean,
-                                                    (dice ** 0.5) * deviation)
+                create_convoluted_distribution_plot(distribution=convoluted_distribution, number_of_dice=dice, mean=dice * mf.mean,
+                                                    deviation=(dice ** 0.5) * mf.deviation)
                 fig = plt.gcf()
 
                 # Draw the plot if related inputs changed
-                if die_distribution != previous_distribution or dice != previous_dice:
+                if mf.die_distribution != previous_distribution or dice != previous_dice:
                     if fig_canvas_matlab_convolve is not None:
                         clear_canvas(fig_canvas_matlab_convolve)
-                    fig_canvas_matlab_convolve = draw_figure(window['canvas'].TKCanvas, fig)
+                    fig_canvas_matlab_convolve = draw_figure(mf.window['canvas'].TKCanvas, fig)
 
-            except ValueError or values['dice' == 0]:
+            except ValueError or mf.values['dice' == 0]:
                 sg.Popup('Please enter an integer for the number of dice to roll.')
 
         elif event == 'go':  # Run the show
             # Get the number of dice to roll and rolls to perform
             try:
-                previous_distribution = die_distribution
+                previous_distribution = mf.die_distribution
                 previous_dice = dice
-                dice, rolls = int(values['dice']), int(values['rolls'])
+                dice, rolls = int(mf.values['dice']), int(mf.values['rolls'])
 
-                die_distribution = [values[f'face{i}'] / 100 for i in range(1, 7)]
-                mean, deviation = mean_and_deviation(die_distribution, get=True, update=False)
+                mf.die_distribution = [mf.values[f'face{i}'] / 100 for i in range(1, 7)]
+                mf.mean_and_deviation(update=False)
 
                 # Convolve the single die distribution with itself 'dice' times
                 # to find the probability distribution of rolling all the desired dice
-                convoluted_distribution = die_distribution
+                convoluted_distribution = mf.die_distribution
                 for _ in range(dice - 1):
-                    convoluted_distribution = np.convolve(convoluted_distribution, die_distribution)
+                    convoluted_distribution = np.convolve(convoluted_distribution, mf.die_distribution)
 
                 # Create plot of theoretical distribution
                 plt.figure(figsize=(10, 4))
                 # create_dice_distribution_plot(die_distribution, face_totals, die_mean, die_standard_deviation)
-                create_convoluted_distribution_plot(convoluted_distribution, dice, dice * mean,
-                                                    (dice ** 0.5) * deviation)
+                create_convoluted_distribution_plot(convoluted_distribution, dice, dice * mf.mean,
+                                                    (dice ** 0.5) * mf.deviation)
                 fig = plt.gcf()
 
                 # Draw the plot if related inputs changed
-                if die_distribution != previous_distribution or dice != previous_dice:
+                if mf.die_distribution != previous_distribution or dice != previous_dice:
                     if fig_canvas_matlab_convolve is not None:
                         clear_canvas(fig_canvas_matlab_convolve)
-                    fig_canvas_matlab_convolve = draw_figure(window['canvas'].TKCanvas, fig)
+                    fig_canvas_matlab_convolve = draw_figure(mf.window['canvas'].TKCanvas, fig)
 
                 # Run the simulation
-                extra_space = len(str(rolls)) - 1
-                logging_UI_text = ' ' * 11 + ' ' * extra_space + "1  2  3  4  5  6"
-                window['outcome_UI_text'].update(value=logging_UI_text)
-                window['log'].update(value='The values describe how often each face appeared.\n')
-                roll_outcomes, face_totals, roll_sums = roll_dice(dice, rolls, die_distribution)
+                mf.extra_space = len(str(rolls)) - 1
+                mf.logging_UI_text = ' ' * 11 + ' ' * mf.extra_space + "1  2  3  4  5  6"
+                mf.window['outcome_UI_text'].update(value=mf.logging_UI_text)
+                mf.window['log'].update(value='The values describe how often each face appeared.\n')
+                roll_outcomes, face_totals, roll_sums = roll_dice(dice, rolls, mf.die_distribution)
 
                 # Create Histogram plot
                 plt.figure(figsize=(10, 4))
@@ -495,12 +305,12 @@ def main():
                 if fig_canvas_agg_simulated is not None:
                     clear_canvas(fig_canvas_agg_simulated)
                     matplotlib.pyplot.close()
-                fig_canvas_agg_simulated = draw_figure(window['simulation'].TKCanvas, fig2)
+                fig_canvas_agg_simulated = draw_figure(mf.window['simulation'].TKCanvas, fig2)
 
-            except ValueError or values['dice' == 0] or values['rolls'] == 0:
+            except ValueError or mf.values['dice' == 0] or mf.values['rolls'] == 0:
                 sg.Popup('Please enter integers for the number of dice to roll and the number of rolls.')
 
-    window.close()
+    mf.window.close()
 
 
 if __name__ == '__main__':
