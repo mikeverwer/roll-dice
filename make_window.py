@@ -1,0 +1,102 @@
+from types import ModuleType
+
+def mainframe(sg: ModuleType, images: dict, theme, values):
+    sg.theme(theme)
+    graph_dimensions = {
+        'x': 1000,
+        'y': 400,
+    }
+
+    # ----------------------------------------------------------------------------------------------------------------------
+    # Layout
+    # ----------------------------------------------------------------------------------------------------------------------
+
+    slider_columns = []
+    for i in range(1, 7):
+        image = sg.Button(image_data=images[f'die{i}'], enable_events=True, key=f'lock{i}')
+        slider = sg.Slider(range=(0, 100), orientation='v', size=(5, 20), enable_events=True,  # was (5, 20)
+                           default_value=values['die_distribution'][i - 1], key=f'face{i}')
+        column = sg.Column([[image], [slider]], element_justification='right')
+        slider_columns.append(column)
+
+    
+    mean = values['mean']
+    deviation = values['deviation']
+    grid_layout = [
+        [sg.Text('The Central Limit Theorem      ', font=("Helvetica", 25))],
+        [sg.Text('This program showcases the Central Limit Theorem from probability theory.\n\n'
+                 'Use the sliders to set a probability distribution for the dice. Then input the\n'
+                 'number of dice to be thrown in each roll, and the number of rolls to perform.')],
+        [sg.Frame('Dice Distribution  |  Click on a die face to lock its value', layout=[
+                [sg.Push(),
+                sg.Frame('', layout=[
+                    [sg.Text(f'Mean: {mean:.2f}', font='helvetica 10 bold', background_color='light cyan', k='mean'),
+                    sg.Text(f'Standard Deviation: {deviation:.2f}', k='deviation', font='helvetica 10 bold', background_color='light cyan')]
+                    ], relief='raised', background_color='light cyan'), sg.Push()
+                ],
+                slider_columns,
+                [sg.Text('_' * 55)],
+                [sg.Text('Preset Distributions'), sg.Combo(values['preset_list'], default_value=None, size=(15, 10),
+                                                            enable_events=True, readonly=True, k='preset'),
+                sg.Text(' ' * 8),
+                sg.Button('Randomize', button_color='cyan')],
+                [sg.Text('', font='Courier 1')],
+            ], font='Helvetica 12 bold',)
+        ],
+        [sg.Text('', font='Courier 1')],
+        [sg.Text('Number of dice to roll: '), sg.Input(s=4, default_text=values['dice'], justification='right', k='dice'),
+         sg.Column([
+             [sg.Button(image_filename='assets/up.png', key='up')],
+             [sg.Button(image_filename='assets/down.png', key='down')]
+         ], element_justification="left"),
+         sg.Text('Number of rolls: '), sg.Input(s=9, default_text=100, k='rolls')],
+        [sg.Text(' ' * 6), sg.Button('Show Sum Distribution', k='theory_button', border_width=2, size=(10, 2),
+                                     enable_events=True, font='Helvetica 12', button_color='white on orange'),
+         sg.Text(' ' * 39),
+         sg.Button('Roll the Bones!', k='go', border_width=2, size=(8, 2), enable_events=True,
+                   bind_return_key=True, font='Helvetica 12', button_color='white on green'), sg.Text(' ' * 0)]
+    ]
+
+    logging_layout = [
+        [sg.Text(values['logging_UI_text'], font='Courier 10', justification='left', k='outcome_UI_text'), sg.Push()],
+        [sg.Push(),
+         sg.Multiline(size=(54, 15),
+                      default_text='All the roll outcomes will be printed here!\nThe values describe how often each face appeared.\n',
+                      font='Courier 10', expand_x=True, expand_y=True, write_only=True, reroute_stdout=True,
+                      reroute_stderr=True,
+                      echo_stdout_stderr=True, autoscroll=True, auto_refresh=True, key='log'),
+         sg.Push()]
+    ]
+
+    grid_layout += logging_layout
+
+    plots_layout = [
+        [sg.Canvas(size=(1000, 400), k='canvas')],
+        [sg.Canvas(size=(1000, 400), k='simulation')]
+    ]
+
+    menu_def = [
+        ['&About', ['About', 'The CLT']]
+    ]
+
+    layout = [
+        [sg.Menu(menu_def, key='menu'), sg.Text('')],
+        [sg.Column(grid_layout, element_justification='center'), sg.Column(plots_layout)],
+    ]
+
+    layout += [[sg.Button('Exit', font='Helvetica 14', button_color='white on red'),
+                sg.Text('Created by: Mike Verwer, M.Sc. Mathematics; Prof. Mathematics, Mohawk College')]]
+
+    # ----------------------------------------------------------------------------------------------------------------------
+    # Initialize Window
+    # ----------------------------------------------------------------------------------------------------------------------
+
+    window = sg.Window(
+        'CLT Demonstration', layout, default_element_size=(55, 1), grab_anywhere=True, finalize=True)  # was (60, 1)
+    
+    # ----------------------------------------------------------------------------------------------------------------------
+    # Hotkeys
+    # ----------------------------------------------------------------------------------------------------------------------
+
+    return window
+    
