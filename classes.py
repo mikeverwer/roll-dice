@@ -20,6 +20,8 @@ class mainframe:
         self.update_interval = 1
         self.extra_space = 0
         self.logging_UI_text = ' '
+        self.graph_size = (1000, 400)
+        self.simulate = False
         print(f'[LOG] initializing frame... Complete!\ndie distribution: {self.die_distribution}')
         
 

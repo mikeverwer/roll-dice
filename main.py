@@ -151,6 +151,10 @@ def main():
     fig_canvas_agg_simulated = None
     dice = 3
 
+    graph = mf.window['simulation graph']
+    # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
+    graph.draw_rectangle((0,0), (mf.graph_size[0] - 225, mf.graph_size[1] - 100))
+
     # ----------------------------------------------------------------------------------------------------------------------
     # Event Loop
     # ----------------------------------------------------------------------------------------------------------------------
@@ -285,6 +289,8 @@ def main():
                 create_convoluted_distribution_plot(convoluted_distribution, dice, dice * mf.mean,
                                                     (dice ** 0.5) * mf.deviation)
                 fig = plt.gcf()
+                axis = plt.gca()
+                x_tick_locs = axis.get_xticks()
 
                 # Draw the plot if related inputs changed
                 if mf.die_distribution != previous_distribution or dice != previous_dice:
@@ -293,25 +299,13 @@ def main():
                     fig_canvas_matlab_convolve = draw_figure(mf.window['canvas'].TKCanvas, fig)
 
                 # Run the simulation
-                mf.extra_space = len(str(rolls)) - 1
-                mf.logging_UI_text = ' ' * 11 + ' ' * mf.extra_space + "1  2  3  4  5  6"
-                mf.window['outcome_UI_text'].update(value=mf.logging_UI_text)
-                mf.window['log'].update(value='The values describe how often each face appeared.\n')
-                roll_outcomes, face_totals, roll_sums = roll_dice(dice, rolls, mf.die_distribution)
-
-                # Create Histogram plot
-                plt.figure(figsize=(10, 4))
-                create_histogram(roll_sums, dice, rolls)
-                fig2 = plt.gcf()
-
-                # Draw the histogram
-                if fig_canvas_agg_simulated is not None:
-                    clear_canvas(fig_canvas_agg_simulated)
-                    matplotlib.pyplot.close()
-                fig_canvas_agg_simulated = draw_figure(mf.window['simulation'].TKCanvas, fig2)
+                mf.simulate = True
 
             except ValueError or mf.values['dice' == 0] or mf.values['rolls'] == 0:
                 sg.Popup('Please enter integers for the number of dice to roll and the number of rolls.')
+
+        if mf.simulate:
+            foo = 0
 
     mf.window.close()
 
