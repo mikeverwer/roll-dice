@@ -7,7 +7,7 @@
 #### Pre-Simulation checklist
 
 - Enough Space?
-  - `required_vertical_px = (1.05 * rolls) * P(x); where P(x) is max(P(x) | x in X)`
+  - `required_vertical_px = (1.05 * rolls) * E[x]; where E[x] expected value/mean of convolution`
     - determine line thickness
   - horizontal_px: determine number of bins, bin width
 
