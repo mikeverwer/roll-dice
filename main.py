@@ -56,45 +56,6 @@ def create_histogram(outcomes, die_rolled, trials):
 def create_convoluted_distribution_plot(distribution, number_of_dice, mean, deviation):
     # all possible outcomes
     outcomes = list(range(number_of_dice, 6 * number_of_dice + 1))  
-                        
-    # feasible outcomes, within 3.5 st. dev.'s from the mean
-    # outcomes = list(range(int(mean - (3.5 * deviation)), int(mean + (3.5 * deviation))))  
-
-    # Check: values in distribution[int(mean - (5.5 * deviation))] and distribution[int(mean + (5.5 * deviation))] ~ 0?
-    #        Need to handle boundary checking.
-    # Trim outcomes and distribution accordingly
-
-    # left_border_index = int(mean - (5.5 * deviation))
-    # print(f'{left_border_index = }')
-    # left_border_index = 0 if left_border_index < 0 else left_border_index
-    # right_border_index = int(mean + (5.5 * deviation))
-    # print(f'{right_border_index = }')
-    # right_border_index = len(outcomes) - 1 if right_border_index > len(outcomes) - 1 else right_border_index
-    # tol = 1e-4
-    # print(f"{left_border_index = }, {right_border_index = }")
-    # print(f"  y at {left_border_index} = {distribution[left_border_index]},\n  y at {right_border_index} = {distribution[right_border_index]}")
-    # print('original outcomes:')
-    # print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }")
-    # if distribution[left_border_index] < tol and distribution[right_border_index] > tol and left_border_index > 0:
-    #     distribution = distribution[left_border_index:]
-    #     outcomes = outcomes[left_border_index:]
-    #     print('trimming LEFT border only')
-    #     print('new outcomes:')
-    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
-    # elif distribution[left_border_index] > tol and distribution[right_border_index] < tol and right_border_index < len(outcomes) - 1:
-    #     distribution = distribution[:right_border_index]
-    #     outcomes = outcomes[:right_border_index]
-    #     print('trimming RIGHT border only')
-    #     print('new outcomes:')
-    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
-    # elif distribution[left_border_index] < tol and distribution[right_border_index] < tol:
-    #     distribution = distribution[left_border_index:right_border_index]
-    #     outcomes = outcomes[left_border_index:right_border_index]
-    #     print('trimming BOTH borders')
-    #     print('new outcomes:')
-    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
-    # else:
-    #     print('No trim needed')
 
     if (0.015 * number_of_dice) < 0.99:
         width = 1 - 0.015 * number_of_dice
@@ -155,7 +116,6 @@ def main():
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
     dice = 3
-    roll_objs: list[roll] = []
     selelect_box_id = None
 
     # ----------------------------------------------------------------------------------------------------------------------
@@ -305,7 +265,6 @@ def main():
 
                 # Run the simulation
                 mf.simulate = True
-                roll_objs: list[roll] = []
                 mf.window['simulation graph'].erase()
                 sim = simulation(mf, x_tick_locs)
 
@@ -319,7 +278,7 @@ def main():
                 selelect_box_id = None
             click = mf.values[event]
             found = False
-            for roll_obj in roll_objs:
+            for roll_obj in sim.rolls:
                 if not found:
                     if roll_obj.is_hit(click):
                         found = True
@@ -333,8 +292,7 @@ def main():
         if mf.simulate:
             if sim.trial_number <= sim.number_of_rolls:
                 print(sim.trial_number)
-                this_roll: roll = sim.roll_dice(sim.trial_number)
-                roll_objs.append(this_roll)
+                sim.roll_dice(sim.trial_number)
                 sim.trial_number += 1
             else:
                 mf.simulate = False

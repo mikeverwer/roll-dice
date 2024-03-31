@@ -200,45 +200,89 @@ class mainframe:
 
 class simulation:
     def __init__(self, frame: mainframe, axis=None):
+        # inheritance
         self.f = frame
-        self.dist = self.f.die_distribution
         self.graph = self.f.window['simulation graph']
+        self.dist = self.f.die_distribution
         self.number_of_rolls = int(self.f.values['rolls'])
         self.number_of_dice = int(self.f.values['dice'])
-        outcomes = list(range(self.number_of_dice - 1, (6 * self.number_of_dice) + 1))
-        self.outcome_counter = {outcome: 0 for outcome in outcomes}
+        self.partition = self.make_partition()
+        # child
+        self.possible_outcomes = list(range(self.number_of_dice - 1, (6 * self.number_of_dice) + 1))
+        self.outcome_counter: dict[int: int] = {}
+        self.trim_outcomes()
+        self.rolls: list[roll] = []
+        self.convolution = self.f.create_convoluted_distribution(self.number_of_dice)
         # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
         # Current Drawing Area, (x, y) = (1000, 400) ==> (0, 0) to (775, 300)
         self.top_right = (self.f.graph_size[0] - 225, self.f.graph_size[1] - 100)
         self.drawing_area = self.graph.draw_rectangle((0,0), self.top_right)
-        self.convolution = self.f.create_convoluted_distribution(self.number_of_dice)
+        self.box_width, self.box_height = self.find_box_size()
+        self.trial_number = 1
+        self.xaxis = axis
+    
+    def trim_outcomes(self):
+        feasible_outcomes = self.possible_outcomes
+        # feasible outcomes, within 3.5 st. dev.'s from the mean
+    # outcomes = list(range(int(mean - (3.5 * deviation)), int(mean + (3.5 * deviation))))  
 
-        most_likely = float(max(self.convolution))
-        print(f'{most_likely = }')
-        approx_most_outcomes = self.number_of_rolls * most_likely * 1.5
+    # Check: values in distribution[int(mean - (5.5 * deviation))] and distribution[int(mean + (5.5 * deviation))] ~ 0?
+    #        Need to handle boundary checking.
+    # Trim outcomes and distribution accordingly
+
+    # left_border_index = int(mean - (5.5 * deviation))
+    # print(f'{left_border_index = }')
+    # left_border_index = 0 if left_border_index < 0 else left_border_index
+    # right_border_index = int(mean + (5.5 * deviation))
+    # print(f'{right_border_index = }')
+    # right_border_index = len(outcomes) - 1 if right_border_index > len(outcomes) - 1 else right_border_index
+    # tol = 1e-4
+    # print(f"{left_border_index = }, {right_border_index = }")
+    # print(f"  y at {left_border_index} = {distribution[left_border_index]},\n  y at {right_border_index} = {distribution[right_border_index]}")
+    # print('original outcomes:')
+    # print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }")
+    # if distribution[left_border_index] < tol and distribution[right_border_index] > tol and left_border_index > 0:
+    #     distribution = distribution[left_border_index:]
+    #     outcomes = outcomes[left_border_index:]
+    #     print('trimming LEFT border only')
+    #     print('new outcomes:')
+    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+    # elif distribution[left_border_index] > tol and distribution[right_border_index] < tol and right_border_index < len(outcomes) - 1:
+    #     distribution = distribution[:right_border_index]
+    #     outcomes = outcomes[:right_border_index]
+    #     print('trimming RIGHT border only')
+    #     print('new outcomes:')
+    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+    # elif distribution[left_border_index] < tol and distribution[right_border_index] < tol:
+    #     distribution = distribution[left_border_index:right_border_index]
+    #     outcomes = outcomes[left_border_index:right_border_index]
+    #     print('trimming BOTH borders')
+    #     print('new outcomes:')
+    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+    # else:
+    #     print('No trim needed')
+        
+        self.outcome_counter = {outcome: 0 for outcome in self.possible_outcomes}
+        return feasible_outcomes
+    
+    def find_box_size(self):
+        highest_probability = float(max(self.convolution))
+        print(f'{highest_probability = }', end=" : ")
+        approx_most_outcomes = self.number_of_rolls * highest_probability * 1.5
         if self.number_of_rolls > 199:
             approx_most_outcomes * 0.75
         if self.number_of_rolls > 499:
             approx_most_outcomes * 0.5
         print(f'{approx_most_outcomes = }')
-        self.box_height = self.top_right[1] // approx_most_outcomes
-        if self.box_height < 2:
-            self.box_height = 2
-        self.box_width = self.top_right[0] // len(self.convolution)
-        print(f'{self.box_height = }, {self.box_width = }')
-
-        self.trial_number = 1
-        self.xaxis = axis
-    
+        box_height = self.top_right[1] // approx_most_outcomes
+        if box_height < 2:
+            box_height = 2
+        box_width = self.top_right[0] // len(self.convolution)
+        print(f'{box_width = }, {box_height = }')
+        return box_width, box_height
+ 
     def draw_axis(self):
         ticks = [item for item in self.xaxis]
-        
-    # def draw_box(self, t_l=None, b_r=None, fill='green', *args, **kwargs):
-    #     if t_l is None:
-    #         t_l = (0, self.box_height)
-    #     if b_r is None:
-    #         b_r = (self.box_width, 0)
-    #     self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill, *args, **kwargs)
 
     def make_partition(self, distribution=None):
         if distribution is None:
@@ -251,22 +295,29 @@ class simulation:
         return partition
     
     def roll_dice(self, count:int = 1):
-        partition = self.make_partition()
         counter = self.outcome_counter
         box_size = (self.box_width, self.box_height)
         graph = self.graph
-        this_roll = roll(self.f, roll_number=count, partition=partition, counter=counter, box_size=box_size, graph=graph, dice=self.number_of_dice)
+        if count == 1:
+            prev_roll = None
+        else:
+            prev_roll = self.rolls[count - 2]  # - 2 since count starts at 1, but rolls index starts at 0
+        this_roll = roll(self.f, roll_number=count, partition=self.partition, counter=counter, box_size=box_size, 
+                         graph=graph, dice=self.number_of_dice, previous_roll=prev_roll)
+        self.rolls.append(this_roll)
         print(this_roll.outcome)
         return this_roll
 
 
 class roll:
-    def __init__(self, sim: simulation, roll_number: int, partition, counter, box_size, graph, dice):
+    def __init__(self, sim: simulation, roll_number: int, partition, counter, box_size, graph, dice, previous_roll):
         self.sim = sim
+        self.roll_number = roll_number
         self.box_width = box_size[0]
         self.box_height = box_size[1]
         self.graph = graph
         self.dice = dice
+        self.prev_roll = previous_roll
 
         outcome = [0] * 6
         for _ in range(dice):
@@ -289,13 +340,13 @@ class roll:
         # bottom left corner in pixels
         y_coord = (counter[this_sum] - 1) * self.box_height  
         x_coord = (this_sum - dice) * self.box_width
-        self.roll_number = roll_number
         self.outcome = outcome
         self.sum = this_sum  # X-coord in grid squares
         self.px_coord = (x_coord, y_coord)
         self.grid_coord = (self.sum - dice, self.frequency - 1)
         self.hitbox = self.make_hitbox()
-        self.id = self.draw_roll(*self.hitbox)
+        self.id: int 
+        self.draw_roll(*self.hitbox)
         self.display = self.is_hit(click=None)
     
 
@@ -310,7 +361,11 @@ class roll:
             t_l = (0, self.box_height)
         if b_r is None:
             b_r = (self.box_width, 0)
-        self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
+        if self.prev_roll:
+            print(f"{self.prev_roll.id = }")
+            previous_box_id = self.prev_roll.id
+            self.graph.TKCanvas.itemconfig(previous_box_id, fill='lightblue')
+        self.id = self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
     
     def is_hit(self, click: tuple, xoffset: int = 0, yoffset: int = 0, offset: None | int = None):
         if offset is not None:
