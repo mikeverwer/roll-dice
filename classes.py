@@ -1,8 +1,9 @@
 import random
+import numpy as np
 
 class mainframe:
-    def __init__(self, images, window=None, values={}):
-        print('[LOG] initializing frame...')
+    def __init__(self, images=None, window=None, values={}):
+        print('[LOG] initializing frame... ', end='')
         self.images = images
         self.window = window
         self.values = values
@@ -16,13 +17,15 @@ class mainframe:
                'Hill': [2, 12, 40, 38, 7, 1]
         }
         self.die_distribution = self.random_distribution(get_var=True)
+        self.dice = 3
+        self.convoluted_distribution = self.create_convoluted_distribution(self.dice)
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 1
         self.extra_space = 0
         self.logging_UI_text = ' '
         self.graph_size = (1000, 400)
         self.simulate = False
-        print(f'[LOG] initializing frame... Complete!\ndie distribution: {self.die_distribution}')
+        print(f'Complete!\ndie distribution: {self.die_distribution}')
         
 
     def random_distribution(self, get_var=False):
@@ -52,23 +55,25 @@ class mainframe:
             self.die_distribution = valid_distribution
 
 
-    def mean_and_deviation(self, distribution=None, update=True):
+    def mean_and_deviation(self, distribution=None, update=True, dice: int = 1):
         get_vars = True
         if distribution is None:
             distribution = self.die_distribution
             get_vars = False
-        if abs(sum(distribution) - 100) <= 5:
+        if abs(sum(distribution) - 100) < 10:
             # Convert a distribution given in percentages to decimal
-            valid_distribution = [item / 100 for item in distribution]
+            valid_distribution = [item / sum(distribution) for item in distribution]
             valid_distribution[-1] = 1 - sum(valid_distribution[:-1])
             distribution = valid_distribution
         mean = 0
-        for x in range(6):
-            mean += (x + 1) * distribution[x]
+        for x, y in enumerate(distribution, 1):
+            mean += x * y
         variance = 0
-        for x in range(1, 7):
-            variance += distribution[x - 1] * ((x - mean) ** 2)
-        standard_deviation = variance ** .5
+        # for x in range(1, 7):
+        for x, y in enumerate(distribution, 1):
+            variance += y * ((x - mean) ** 2)
+        standard_deviation = variance ** .5        
+        mean += (dice - 1)
         
         if update:
             self.window['mean'].update(f'Mean: {mean:.2f}')
@@ -77,6 +82,17 @@ class mainframe:
             return mean, standard_deviation
         else:
             self.mean, self.deviation = mean, standard_deviation
+
+    
+    def create_convoluted_distribution(self, dice=None):
+        if dice is None:
+            dice = int(self.values['dice'])
+        convoluted_distribution = self.die_distribution
+        for _ in range(dice - 1):
+            convoluted_distribution = np.convolve(convoluted_distribution, self.die_distribution)
+        # all possible outcomes
+        outcomes = list(range(dice, 6 * dice))
+        return convoluted_distribution
 
 
     def add_preset(self, new_preset: str):
@@ -93,6 +109,7 @@ class mainframe:
             self.window[f'lock{active_lock}'].update(image_data=self.images[f'lock{active_lock}'])
         else:
             self.window[f'lock{active_lock}'].update(image_data=self.images[f'die{active_lock}'])
+            self.locked_values[active_lock - 1] = 0
 
 
     def set_sliders_to(self, slider_values, reset_locks=False):
@@ -179,3 +196,118 @@ class mainframe:
         else:  # Slider is locked, keep value constant
             self.values[event] = self.locked_values[int(event[-1]) - 1]
             self.window[event].update(self.values[event])
+
+class simulation:
+    def __init__(self, frame: mainframe, axis=None):
+        self.f = frame
+        self.dist = self.f.die_distribution
+        self.graph = self.f.window['simulation graph']
+        self.number_of_rolls = int(self.f.values['rolls'])
+        outcomes = list(range(self.f.dice, 6 * self.f.dice))
+        self.outcome_counter = {outcome: 0 for outcome in outcomes}
+        # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
+        # Current Drawing Area, (x, y) = (1000, 400) ==> (0, 0) to (775, 300)
+        self.top_right = (self.f.graph_size[0] - 225, self.f.graph_size[1] - 100)
+        self.drawing_area = self.graph.draw_rectangle((0,0), self.top_right)
+        self.convolution = self.f.create_convoluted_distribution(int(self.f.values['dice']))
+
+        most_likely = float(max(self.convolution))
+        print(f'{most_likely = }')
+        approx_most_outcomes = self.number_of_rolls * most_likely * 1.15
+        print(f'{approx_most_outcomes = }')
+        self.box_height = self.top_right[1] // approx_most_outcomes
+        self.box_width = self.top_right[0] // len(self.convolution)
+        print(f'{self.box_height = }, {self.box_width = }')
+
+        self.trial_number = 1
+        self.xaxis = axis
+        self.steps = {
+            'outline drawing area': False,
+            'make grid': False,
+            'draw tick marks': False,
+            'draw labels': False,
+            'roll': {
+                'rolling': False,
+                'trial': 0,
+                'outcome': None,
+                'find coord': False,
+                'update old line': False,
+                'draw new line': False,
+            }
+        }
+        self.id = {
+            'old_line': None,
+            'new_line': None,
+        }
+    
+    def draw_axis(self):
+        ticks = [item for item in self.xaxis]
+        
+    def draw_box(self, t_l=None, b_r=None, fill='green'):
+        if t_l is None:
+            t_l = (0, self.box_height)
+        if b_r is None:
+            b_r = (self.box_width, 0)
+        self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
+
+    def make_partition(self, distribution=None):
+        if distribution is None:
+            distribution = self.dist
+        partition = [0]
+        total = 0
+        for i in range(len(distribution)):
+            total += distribution[i]
+            partition.append(total)
+        return partition
+    
+    def roll_dice(self, count:int = 1):
+        partition = self.make_partition()
+        counter = self.outcome_counter
+        box_size = (self.box_width, self.box_height)
+        graph = self.graph
+        this_roll = roll(self.f, roll_number=count, partition=partition, counter=counter, box_size=box_size, graph=graph)
+        print(this_roll.outcome)
+        return this_roll
+
+
+class roll:
+    def __init__(self, sim: simulation, roll_number: int, partition, counter, box_size, graph):
+        self.sim = sim
+        self.box_width = box_size[0]
+        self.box_height = box_size[1]
+        self.graph = graph
+
+        outcome = [0] * 6
+        for _ in range(self.sim.dice):
+            roll = random.random()
+            for j in range(7):
+                if partition[j] <= roll < partition[j + 1]:
+                    outcome[j] += 1
+        this_sum = np.dot(outcome, [1, 2, 3, 4, 5, 6])
+        counter[this_sum] += 1
+
+        self.frequency = counter[this_sum]
+
+        # bottom left corner in pixels
+        y_coord = (counter[this_sum] - 1) * self.box_height  
+        x_coord = (this_sum - sim.dice) * self.box_width
+        self.roll_number = roll_number
+        self.outcome = outcome
+        self.sum = this_sum  # X-coord in grid squares
+        self.px_coord = (x_coord, y_coord)
+        self.grid_coord = (self.sum - sim.dice, self.frequency - 1)
+        self.hitbox = self.make_hitbox()
+        self.draw_roll()
+
+    def make_hitbox(self):
+        # top-left, bottom-right
+        top_left = (self.px_coord[0], self.px_coord[1] + self.box_height)
+        bottom_right = self.px_coord[0] + self.box_width, self.px_coord[1]
+        return top_left, bottom_right
+    
+    def draw_roll(self, t_l=None, b_r=None, fill='green'):
+        if t_l is None:
+            t_l = (0, self.box_height)
+        if b_r is None:
+            b_r = (self.box_width, 0)
+        self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)

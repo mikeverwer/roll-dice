@@ -7,6 +7,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 import make_window as make
 from classes import mainframe
+from classes import simulation
 
 matplotlib.use('TkAgg')
 
@@ -89,7 +90,47 @@ def create_histogram(outcomes, die_rolled, trials):
 
 
 def create_convoluted_distribution_plot(distribution, number_of_dice, mean, deviation):
-    outcomes = list(range(number_of_dice, 6 * number_of_dice + 1))
+    # all possible outcomes
+    outcomes = list(range(number_of_dice, 6 * number_of_dice + 1))  
+                        
+    # feasible outcomes, within 3.5 st. dev.'s from the mean
+    # outcomes = list(range(int(mean - (3.5 * deviation)), int(mean + (3.5 * deviation))))  
+
+    # Check: values in distribution[int(mean - (5.5 * deviation))] and distribution[int(mean + (5.5 * deviation))] ~ 0?
+    #        Need to handle boundary checking.
+    # Trim outcomes and distribution accordingly
+
+    left_border_index = int(mean - (5.5 * deviation))
+    print(f'{left_border_index = }')
+    left_border_index = 0 if left_border_index < 0 else left_border_index
+    right_border_index = int(mean + (5.5 * deviation))
+    print(f'{right_border_index = }')
+    right_border_index = len(outcomes) - 1 if right_border_index > len(outcomes) - 1 else right_border_index
+    tol = 1e-4
+    print(f"{left_border_index = }, {right_border_index = }")
+    print(f"  y at {left_border_index} = {distribution[left_border_index]},\n  y at {right_border_index} = {distribution[right_border_index]}")
+    print('original outcomes:')
+    print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }")
+    if distribution[left_border_index] < tol and distribution[right_border_index] > tol and left_border_index > 0:
+        distribution = distribution[left_border_index:]
+        outcomes = outcomes[left_border_index:]
+        print('trimming LEFT border only')
+        print('new outcomes:')
+        print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+    elif distribution[left_border_index] > tol and distribution[right_border_index] < tol and right_border_index < len(outcomes) - 1:
+        distribution = distribution[:right_border_index]
+        outcomes = outcomes[:right_border_index]
+        print('trimming RIGHT border only')
+        print('new outcomes:')
+        print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+    elif distribution[left_border_index] < tol and distribution[right_border_index] < tol:
+        distribution = distribution[left_border_index:right_border_index]
+        outcomes = outcomes[left_border_index:right_border_index]
+        print('trimming BOTH borders')
+        print('new outcomes:')
+        print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+    else:
+        print('No trim needed')
 
     if (0.015 * number_of_dice) < 0.99:
         width = 1 - 0.015 * number_of_dice
@@ -151,10 +192,6 @@ def main():
     fig_canvas_agg_simulated = None
     dice = 3
 
-    graph = mf.window['simulation graph']
-    # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
-    graph.draw_rectangle((0,0), (mf.graph_size[0] - 225, mf.graph_size[1] - 100))
-
     # ----------------------------------------------------------------------------------------------------------------------
     # Event Loop
     # ----------------------------------------------------------------------------------------------------------------------
@@ -202,6 +239,7 @@ def main():
             set_to_preset = mf.values[event]
             mf.set_sliders_to(mf.presets[set_to_preset], reset_locks=True)
 
+
         elif event == 'add preset' and mf.values['preset'] != '':
             mf.add_preset(mf.values['preset'])
 
@@ -242,8 +280,6 @@ def main():
                 previous_distribution = mf.die_distribution
                 previous_dice = dice
                 dice = int(mf.values['dice'])
-                mf.die_distribution = [mf.values[f'face{i}'] / 100 for i in range(1, 7)]
-                mf.mean_and_deviation(update=True)
 
                 # Convolve the single die distribution with itself 'dice' times
                 # to find the probability distribution of rolling all the desired dice
@@ -254,8 +290,10 @@ def main():
                 # Create plot of theoretical distribution
                 plt.figure(figsize=(10, 4))
                 # create_dice_distribution_plot(die_distribution, face_totals, die_mean, die_standard_deviation)
-                create_convoluted_distribution_plot(distribution=convoluted_distribution, number_of_dice=dice, mean=dice * mf.mean,
-                                                    deviation=(dice ** 0.5) * mf.deviation)
+                mf.window['log'].update(value="")
+                conv_mean, conv_deviation = mf.mean_and_deviation(distribution=convoluted_distribution, update=False, dice=dice)
+                create_convoluted_distribution_plot(distribution=convoluted_distribution, number_of_dice=dice, mean=conv_mean,
+                                                    deviation=conv_deviation)
                 fig = plt.gcf()
 
                 # Draw the plot if related inputs changed
@@ -264,8 +302,8 @@ def main():
                         clear_canvas(fig_canvas_matlab_convolve)
                     fig_canvas_matlab_convolve = draw_figure(mf.window['canvas'].TKCanvas, fig)
 
-            except ValueError or mf.values['dice' == 0]:
-                sg.Popup('Please enter an integer for the number of dice to roll.')
+            except ValueError as ve:
+                sg.Popup(f'Value Error: {ve}')
 
         elif event == 'go':  # Run the show
             # Get the number of dice to roll and rolls to perform
@@ -300,12 +338,20 @@ def main():
 
                 # Run the simulation
                 mf.simulate = True
+                mf.window['simulation graph'].erase()
+                sim = simulation(mf, x_tick_locs)
+                sim.draw_axis()
 
-            except ValueError or mf.values['dice' == 0] or mf.values['rolls'] == 0:
-                sg.Popup('Please enter integers for the number of dice to roll and the number of rolls.')
+            except ValueError as ve:
+                sg.Popup(f'Value Error: {ve}')
 
         if mf.simulate:
-            foo = 0
+            if sim.trial_number < sim.number_of_rolls:
+                this_roll = sim.roll_dice(sim.trial_number)
+                sim.trial_number += 1
+                print(sim.trial_number)
+            else:
+                mf.simulate = False
 
     mf.window.close()
 
