@@ -316,15 +316,15 @@ def main():
         elif event == 'simulation graph':
             print(f"[LOG] pressed {event}: {mf.values[event]}")
             if selelect_box_id:
-                sim_graph.erase(selelect_box_id)
+                sim_graph.delete_figure(selelect_box_id)
+                selelect_box_id = None
             click = mf.values[event]
-            print(click)
             found = False
             for roll_obj in roll_objs:
                 if not found:
                     if roll_obj.is_hit(click):
                         found = True
-                        selelect_box_id = sim_graph.draw_rectangle(roll_obj.hitbox[0], roll_obj.hitbox[1], 'majenta')
+                        selelect_box_id = sim_graph.draw_rectangle(roll_obj.hitbox[0], roll_obj.hitbox[1], 'magenta')
                         print(f'hit roll {roll_obj.roll_number}')
 
         
@@ -332,11 +332,11 @@ def main():
         # Animation
         ######################################
         if mf.simulate:
-            if sim.trial_number < sim.number_of_rolls:
+            if sim.trial_number <= sim.number_of_rolls:
+                print(sim.trial_number)
                 this_roll: roll = sim.roll_dice(sim.trial_number)
                 roll_objs.append(this_roll)
                 sim.trial_number += 1
-                print(sim.trial_number)
             else:
                 mf.simulate = False
 

@@ -205,7 +205,7 @@ class simulation:
         self.graph = self.f.window['simulation graph']
         self.number_of_rolls = int(self.f.values['rolls'])
         self.number_of_dice = int(self.f.values['dice'])
-        outcomes = list(range(self.f.dice, (6 * self.number_of_dice) + 1))
+        outcomes = list(range(self.number_of_dice - 1, (6 * self.number_of_dice) + 1))
         self.outcome_counter = {outcome: 0 for outcome in outcomes}
         # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
         # Current Drawing Area, (x, y) = (1000, 400) ==> (0, 0) to (775, 300)
@@ -251,12 +251,12 @@ class simulation:
     def draw_axis(self):
         ticks = [item for item in self.xaxis]
         
-    def draw_box(self, t_l=None, b_r=None, fill='green', *args, **kwargs):
-        if t_l is None:
-            t_l = (0, self.box_height)
-        if b_r is None:
-            b_r = (self.box_width, 0)
-        self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill, *args, **kwargs)
+    # def draw_box(self, t_l=None, b_r=None, fill='green', *args, **kwargs):
+    #     if t_l is None:
+    #         t_l = (0, self.box_height)
+    #     if b_r is None:
+    #         b_r = (self.box_width, 0)
+    #     self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill, *args, **kwargs)
 
     def make_partition(self, distribution=None):
         if distribution is None:
@@ -337,13 +337,12 @@ class roll:
         if click:
             half_length = abs(self.hitbox[0][0] - self.hitbox[1][0]) / 2
             half_height = abs(self.hitbox[0][1] - self.hitbox[1][1]) / 2
-            center = (self.grid_coord[0] + half_length, self.grid_coord[1] + half_height)
+            center = (self.px_coord[0] + half_length, self.px_coord[1] + half_height)
             dx = abs(click[0] - center[0])
             dy = abs(click[1] - center[1])
             if dx - half_length <= xoffset and dy - half_height <= yoffset:
                 return True
             else:
-                print(f"{self.roll_number = }, {dx = }, {dy = }")
                 return False
         else:
             return False
