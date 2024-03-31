@@ -72,7 +72,7 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     dx = 125
     dy = 50
     plots_layout = [
-        [sg.Canvas(size=(1000, 400), k='canvas')],
+        [sg.Canvas(size=(600, 300), k='canvas')],
         [sg.Graph((frame.graph_size[0], frame.graph_size[1]), (-dx, -dy), (1000 - dx, 400 - dy), background_color='white', key = 'simulation graph',
                   expand_y=True, enable_events=True)
         ]

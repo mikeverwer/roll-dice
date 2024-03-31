@@ -1,8 +1,17 @@
 # To Do
 
+- add x grid marks to simulation graph
+- convert convolution display to graph that auto-updates when the die distribution changes
+- fix "fair" die being unfair
+- pre-sim checklist
+- trim x-axes
+- rework the window
+  . make convolution display smaller, where log is now
+  . raise simulation graph and add controls/roll display below
+
 ## High priority
 
-### build simulation  
+### Simulation Complete
 
 #### Pre-Simulation checklist
 
@@ -11,21 +20,10 @@
     - determine line thickness
   - horizontal_px: determine number of bins, bin width
 
-#### Simulation Steps
-
-1. Draw box around graphing area
-2. Draw tick marks and labels
-3. Roll:
-    1. roll the *n* dice and get sum (perhaps display somehow). add to frequency dictionary.
-    2. find coordinates for sum: `(sum, frequency['sum'])`
-    3. if old_line: -> draw over old line (blue)
-    4. draw new line
-
 ## Lower Priority
 
 - move to separate files
     . handle_events(sg, window, values) -  *maybe*
-    . make_window(sg, values)
 
 ## Bug Fixes
 
