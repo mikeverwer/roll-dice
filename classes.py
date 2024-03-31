@@ -269,6 +269,8 @@ class simulation:
         highest_probability = float(max(self.convolution))
         print(f'{highest_probability = }', end=" : ")
         approx_most_outcomes = self.number_of_rolls * highest_probability * 1.5
+        if self.number_of_rolls <= 199 and self.number_of_dice > 8:
+            approx_most_outcomes * 2.25
         if self.number_of_rolls > 199:
             approx_most_outcomes * 0.75
         if self.number_of_rolls > 499:
@@ -277,6 +279,8 @@ class simulation:
         box_height = self.top_right[1] // approx_most_outcomes
         if box_height < 2:
             box_height = 2
+        if box_height > 0.10 * self.top_right[1]:
+            box_height = 0.08 * self.top_right[1]
         box_width = self.top_right[0] // len(self.convolution)
         print(f'{box_width = }, {box_height = }')
         return box_width, box_height
@@ -364,7 +368,7 @@ class roll:
         if self.prev_roll:
             print(f"{self.prev_roll.id = }")
             previous_box_id = self.prev_roll.id
-            self.graph.TKCanvas.itemconfig(previous_box_id, fill='lightblue')
+            self.graph.TKCanvas.itemconfig(previous_box_id, fill='cyan')
         self.id = self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
     
     def is_hit(self, click: tuple, xoffset: int = 0, yoffset: int = 0, offset: None | int = None):
