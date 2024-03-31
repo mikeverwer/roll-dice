@@ -297,7 +297,7 @@ class roll:
         self.px_coord = (x_coord, y_coord)
         self.grid_coord = (self.sum - sim.dice, self.frequency - 1)
         self.hitbox = self.make_hitbox()
-        self.draw_roll()
+        self.draw_roll(*self.hitbox)
 
     def make_hitbox(self):
         # top-left, bottom-right
