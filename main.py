@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
+# required files
 import make_window as make
 from classes import mainframe
 from classes import simulation
+from classes import roll
 
 matplotlib.use('TkAgg')
 
@@ -34,44 +36,6 @@ images = {
 # ----------------------------------------------------------------------------------------------------------------------
 # Functions for calculations
 # ----------------------------------------------------------------------------------------------------------------------
-def roll_dice(k, n, distribution=None):
-    # rolls k dice, n times; then counts the face outcomes of the k rolls for each trial and sums them
-    # we then count the frequency of each face over all n trials
-
-    # partition the closed set of reals [0,1] according to the input die distribution
-    if distribution is None:
-        distribution = [float(1 / 6)] * 6
-        distribution[-1] = 1 - sum(distribution[:-1])
-    partition = [0]
-    total = 0
-    for i in range(len(distribution)):
-        total += distribution[i]
-        partition.append(total)
-
-    # roll the dice. The outcome is an n x 6 matrix whose rows are the frequency of each face in the k rolls performed
-    outcomes = []
-    sum_of_faces = []
-    face_counts = [0] * 6
-    print(f"Results of rolling {k} dice {n} times: ")
-    print("------------------")
-    for a in range(n):
-        this_outcome = [0] * 6
-        for b in range(k):
-            roll = random.random()
-            for c in range(7):
-                if partition[c] <= roll < partition[c + 1]:
-                    this_outcome[c] += 1
-                    face_counts[c] += 1  # Count how often each face occurred in total
-
-        outcomes.append(this_outcome)
-        sum_of_faces.append(np.dot(outcomes[a], [1, 2, 3, 4, 5, 6]))
-        padding = len(str(n)) - len(str(a + 1))
-        roll_string = 'roll-' + ' ' * padding
-        print(roll_string + f'{a + 1} ' + f': {this_outcome} : Sum = {sum_of_faces[a]}')
-
-    return outcomes, face_counts, sum_of_faces
-
-
 # ----------------------------------------------------------------------------------------------------------------------
 # Making plots
 # ----------------------------------------------------------------------------------------------------------------------
@@ -100,37 +64,37 @@ def create_convoluted_distribution_plot(distribution, number_of_dice, mean, devi
     #        Need to handle boundary checking.
     # Trim outcomes and distribution accordingly
 
-    left_border_index = int(mean - (5.5 * deviation))
-    print(f'{left_border_index = }')
-    left_border_index = 0 if left_border_index < 0 else left_border_index
-    right_border_index = int(mean + (5.5 * deviation))
-    print(f'{right_border_index = }')
-    right_border_index = len(outcomes) - 1 if right_border_index > len(outcomes) - 1 else right_border_index
-    tol = 1e-4
-    print(f"{left_border_index = }, {right_border_index = }")
-    print(f"  y at {left_border_index} = {distribution[left_border_index]},\n  y at {right_border_index} = {distribution[right_border_index]}")
-    print('original outcomes:')
-    print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }")
-    if distribution[left_border_index] < tol and distribution[right_border_index] > tol and left_border_index > 0:
-        distribution = distribution[left_border_index:]
-        outcomes = outcomes[left_border_index:]
-        print('trimming LEFT border only')
-        print('new outcomes:')
-        print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
-    elif distribution[left_border_index] > tol and distribution[right_border_index] < tol and right_border_index < len(outcomes) - 1:
-        distribution = distribution[:right_border_index]
-        outcomes = outcomes[:right_border_index]
-        print('trimming RIGHT border only')
-        print('new outcomes:')
-        print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
-    elif distribution[left_border_index] < tol and distribution[right_border_index] < tol:
-        distribution = distribution[left_border_index:right_border_index]
-        outcomes = outcomes[left_border_index:right_border_index]
-        print('trimming BOTH borders')
-        print('new outcomes:')
-        print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
-    else:
-        print('No trim needed')
+    # left_border_index = int(mean - (5.5 * deviation))
+    # print(f'{left_border_index = }')
+    # left_border_index = 0 if left_border_index < 0 else left_border_index
+    # right_border_index = int(mean + (5.5 * deviation))
+    # print(f'{right_border_index = }')
+    # right_border_index = len(outcomes) - 1 if right_border_index > len(outcomes) - 1 else right_border_index
+    # tol = 1e-4
+    # print(f"{left_border_index = }, {right_border_index = }")
+    # print(f"  y at {left_border_index} = {distribution[left_border_index]},\n  y at {right_border_index} = {distribution[right_border_index]}")
+    # print('original outcomes:')
+    # print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }")
+    # if distribution[left_border_index] < tol and distribution[right_border_index] > tol and left_border_index > 0:
+    #     distribution = distribution[left_border_index:]
+    #     outcomes = outcomes[left_border_index:]
+    #     print('trimming LEFT border only')
+    #     print('new outcomes:')
+    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+    # elif distribution[left_border_index] > tol and distribution[right_border_index] < tol and right_border_index < len(outcomes) - 1:
+    #     distribution = distribution[:right_border_index]
+    #     outcomes = outcomes[:right_border_index]
+    #     print('trimming RIGHT border only')
+    #     print('new outcomes:')
+    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+    # elif distribution[left_border_index] < tol and distribution[right_border_index] < tol:
+    #     distribution = distribution[left_border_index:right_border_index]
+    #     outcomes = outcomes[left_border_index:right_border_index]
+    #     print('trimming BOTH borders')
+    #     print('new outcomes:')
+    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+    # else:
+    #     print('No trim needed')
 
     if (0.015 * number_of_dice) < 0.99:
         width = 1 - 0.015 * number_of_dice
@@ -191,6 +155,8 @@ def main():
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
     dice = 3
+    roll_objs: list[roll] = []
+    selelect_box_id = None
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Event Loop
@@ -198,6 +164,7 @@ def main():
 
     while True:
         event, mf.values = mf.window.read(timeout = 1000 // mf.update_interval)
+        sim_graph = mf.window['simulation graph']
 
         if event in (None, 'Exit'):
             break
@@ -338,16 +305,36 @@ def main():
 
                 # Run the simulation
                 mf.simulate = True
+                roll_objs: list[roll] = []
                 mf.window['simulation graph'].erase()
                 sim = simulation(mf, x_tick_locs)
                 sim.draw_axis()
 
             except ValueError as ve:
                 sg.Popup(f'Value Error: {ve}')
+        
+        elif event == 'simulation graph':
+            print(f"[LOG] pressed {event}: {mf.values[event]}")
+            if selelect_box_id:
+                sim_graph.erase(selelect_box_id)
+            click = mf.values[event]
+            print(click)
+            found = False
+            for roll_obj in roll_objs:
+                if not found:
+                    if roll_obj.is_hit(click):
+                        found = True
+                        selelect_box_id = sim_graph.draw_rectangle(roll_obj.hitbox[0], roll_obj.hitbox[1], 'majenta')
+                        print(f'hit roll {roll_obj.roll_number}')
 
+        
+        ######################################
+        # Animation
+        ######################################
         if mf.simulate:
             if sim.trial_number < sim.number_of_rolls:
-                this_roll = sim.roll_dice(sim.trial_number)
+                this_roll: roll = sim.roll_dice(sim.trial_number)
+                roll_objs.append(this_roll)
                 sim.trial_number += 1
                 print(sim.trial_number)
             else:

@@ -20,7 +20,7 @@ class mainframe:
         self.dice = 3
         self.convoluted_distribution = self.create_convoluted_distribution(self.dice)
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
-        self.update_interval = 1
+        self.update_interval = 64
         self.extra_space = 0
         self.logging_UI_text = ' '
         self.graph_size = (1000, 400)
@@ -197,25 +197,33 @@ class mainframe:
             self.values[event] = self.locked_values[int(event[-1]) - 1]
             self.window[event].update(self.values[event])
 
+
 class simulation:
     def __init__(self, frame: mainframe, axis=None):
         self.f = frame
         self.dist = self.f.die_distribution
         self.graph = self.f.window['simulation graph']
         self.number_of_rolls = int(self.f.values['rolls'])
-        outcomes = list(range(self.f.dice, 6 * self.f.dice))
+        self.number_of_dice = int(self.f.values['dice'])
+        outcomes = list(range(self.f.dice, (6 * self.number_of_dice) + 1))
         self.outcome_counter = {outcome: 0 for outcome in outcomes}
         # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
         # Current Drawing Area, (x, y) = (1000, 400) ==> (0, 0) to (775, 300)
         self.top_right = (self.f.graph_size[0] - 225, self.f.graph_size[1] - 100)
         self.drawing_area = self.graph.draw_rectangle((0,0), self.top_right)
-        self.convolution = self.f.create_convoluted_distribution(int(self.f.values['dice']))
+        self.convolution = self.f.create_convoluted_distribution(self.number_of_dice)
 
         most_likely = float(max(self.convolution))
         print(f'{most_likely = }')
-        approx_most_outcomes = self.number_of_rolls * most_likely * 1.15
+        approx_most_outcomes = self.number_of_rolls * most_likely * 1.5
+        if self.number_of_rolls > 199:
+            approx_most_outcomes * 0.75
+        if self.number_of_rolls > 499:
+            approx_most_outcomes * 0.5
         print(f'{approx_most_outcomes = }')
         self.box_height = self.top_right[1] // approx_most_outcomes
+        if self.box_height < 2:
+            self.box_height = 2
         self.box_width = self.top_right[0] // len(self.convolution)
         print(f'{self.box_height = }, {self.box_width = }')
 
@@ -243,12 +251,12 @@ class simulation:
     def draw_axis(self):
         ticks = [item for item in self.xaxis]
         
-    def draw_box(self, t_l=None, b_r=None, fill='green'):
+    def draw_box(self, t_l=None, b_r=None, fill='green', *args, **kwargs):
         if t_l is None:
             t_l = (0, self.box_height)
         if b_r is None:
             b_r = (self.box_width, 0)
-        self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
+        self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill, *args, **kwargs)
 
     def make_partition(self, distribution=None):
         if distribution is None:
@@ -265,39 +273,49 @@ class simulation:
         counter = self.outcome_counter
         box_size = (self.box_width, self.box_height)
         graph = self.graph
-        this_roll = roll(self.f, roll_number=count, partition=partition, counter=counter, box_size=box_size, graph=graph)
+        this_roll = roll(self.f, roll_number=count, partition=partition, counter=counter, box_size=box_size, graph=graph, dice=self.number_of_dice)
         print(this_roll.outcome)
         return this_roll
 
 
 class roll:
-    def __init__(self, sim: simulation, roll_number: int, partition, counter, box_size, graph):
+    def __init__(self, sim: simulation, roll_number: int, partition, counter, box_size, graph, dice):
         self.sim = sim
         self.box_width = box_size[0]
         self.box_height = box_size[1]
         self.graph = graph
+        self.dice = dice
 
         outcome = [0] * 6
-        for _ in range(self.sim.dice):
+        for _ in range(dice):
             roll = random.random()
             for j in range(7):
                 if partition[j] <= roll < partition[j + 1]:
                     outcome[j] += 1
         this_sum = np.dot(outcome, [1, 2, 3, 4, 5, 6])
-        counter[this_sum] += 1
 
-        self.frequency = counter[this_sum]
+        try:
+            counter[this_sum] += 1
+        except KeyError as ke:
+            print(f'{this_sum = }\n{counter = }\n\n{ke}')
+
+        try:
+            self.frequency = counter[this_sum]
+        except KeyError as ke:
+            print(f'{this_sum = }\n{counter = }\n\n{ke}')
 
         # bottom left corner in pixels
         y_coord = (counter[this_sum] - 1) * self.box_height  
-        x_coord = (this_sum - sim.dice) * self.box_width
+        x_coord = (this_sum - dice) * self.box_width
         self.roll_number = roll_number
         self.outcome = outcome
         self.sum = this_sum  # X-coord in grid squares
         self.px_coord = (x_coord, y_coord)
-        self.grid_coord = (self.sum - sim.dice, self.frequency - 1)
+        self.grid_coord = (self.sum - dice, self.frequency - 1)
         self.hitbox = self.make_hitbox()
-        self.draw_roll(*self.hitbox)
+        self.id = self.draw_roll(*self.hitbox)
+        self.display = self.is_hit(click=None)
+    
 
     def make_hitbox(self):
         # top-left, bottom-right
@@ -311,3 +329,21 @@ class roll:
         if b_r is None:
             b_r = (self.box_width, 0)
         self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
+    
+    def is_hit(self, click: tuple, xoffset: int = 0, yoffset: int = 0, offset: None | int = None):
+        if offset is not None:
+            xoffset = offset
+            yoffset = offset
+        if click:
+            half_length = abs(self.hitbox[0][0] - self.hitbox[1][0]) / 2
+            half_height = abs(self.hitbox[0][1] - self.hitbox[1][1]) / 2
+            center = (self.grid_coord[0] + half_length, self.grid_coord[1] + half_height)
+            dx = abs(click[0] - center[0])
+            dy = abs(click[1] - center[1])
+            if dx - half_length <= xoffset and dy - half_height <= yoffset:
+                return True
+            else:
+                print(f"{self.roll_number = }, {dx = }, {dy = }")
+                return False
+        else:
+            return False
