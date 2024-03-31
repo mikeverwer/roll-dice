@@ -235,38 +235,10 @@ def main():
         elif event == 'go':  # Run the show
             # Get the number of dice to roll and rolls to perform
             try:
-                previous_distribution = mf.die_distribution
-                previous_dice = dice
-                dice, rolls = int(mf.values['dice']), int(mf.values['rolls'])
-
-                mf.die_distribution = [mf.values[f'face{i}'] / 100 for i in range(1, 7)]
-                mf.mean_and_deviation(update=False)
-
-                # Convolve the single die distribution with itself 'dice' times
-                # to find the probability distribution of rolling all the desired dice
-                convoluted_distribution = mf.die_distribution
-                for _ in range(dice - 1):
-                    convoluted_distribution = np.convolve(convoluted_distribution, mf.die_distribution)
-
-                # Create plot of theoretical distribution
-                plt.figure(figsize=(10, 4))
-                # create_dice_distribution_plot(die_distribution, face_totals, die_mean, die_standard_deviation)
-                create_convoluted_distribution_plot(convoluted_distribution, dice, dice * mf.mean,
-                                                    (dice ** 0.5) * mf.deviation)
-                fig = plt.gcf()
-                axis = plt.gca()
-                x_tick_locs = axis.get_xticks()
-
-                # Draw the plot if related inputs changed
-                if mf.die_distribution != previous_distribution or dice != previous_dice:
-                    if fig_canvas_matlab_convolve is not None:
-                        clear_canvas(fig_canvas_matlab_convolve)
-                    fig_canvas_matlab_convolve = draw_figure(mf.window['canvas'].TKCanvas, fig)
-
                 # Run the simulation
                 mf.simulate = True
                 mf.window['simulation graph'].erase()
-                sim = simulation(mf, x_tick_locs)
+                sim = simulation(mf)
 
             except ValueError as ve:
                 sg.Popup(f'Value Error: {ve}')

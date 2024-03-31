@@ -18,14 +18,16 @@ class mainframe:
         }
         self.die_distribution = self.random_distribution(get_var=True)
         self.dice = 3
-        self.convoluted_distribution = self.create_convoluted_distribution(self.dice)
+        self.convoluted_distribution = self.create_convoluted_distribution(self.dice, get_var=True)
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 64
+        self.sim_graph_size = (1000, 400)
+        self.con_graph_size = (400, 300)
+        self.con_graph = None
         self.extra_space = 0
         self.logging_UI_text = ' '
-        self.graph_size = (1000, 400)
         self.simulate = False
-        print(f'Complete!\ndie distribution: {self.die_distribution}')
+        print(f'Complete!\nStarting die distribution: {self.die_distribution}')
         
 
     def random_distribution(self, get_var=False):
@@ -80,11 +82,10 @@ class mainframe:
             self.window['deviation'].update(f'Standard Deviation: {standard_deviation:.2f}')
         if get_vars:
             return mean, standard_deviation
-        else:
-            self.mean, self.deviation = mean, standard_deviation
+        else: self.mean, self.deviation = mean, standard_deviation
 
     
-    def create_convoluted_distribution(self, dice=None):
+    def create_convoluted_distribution(self, dice=None, get_var=False, draw=False):
         if dice is None:
             dice = int(self.values['dice'])
         convoluted_distribution = self.die_distribution
@@ -92,7 +93,17 @@ class mainframe:
             convoluted_distribution = np.convolve(convoluted_distribution, self.die_distribution)
         # all possible outcomes
         outcomes = list(range(dice, 6 * dice))
-        return convoluted_distribution
+        if get_var:
+            return convoluted_distribution
+        else: 
+            self.convoluted_distribution = convoluted_distribution
+        if draw:
+            self.draw_convoluted_distribution(convoluted_distribution)
+
+    def draw_convoluted_distribution(self, dist=None):
+        if dist is None:
+            dist = self.convoluted_distribution
+
 
 
     def add_preset(self, new_preset: str):
@@ -212,10 +223,10 @@ class simulation:
         self.outcome_counter: dict[int: int] = {}
         self.trim_outcomes()
         self.rolls: list[roll] = []
-        self.convolution = self.f.create_convoluted_distribution(self.number_of_dice)
+        self.convolution = self.f.create_convoluted_distribution(self.number_of_dice, get_var=True, draw=False)
         # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
         # Current Drawing Area, (x, y) = (1000, 400) ==> (0, 0) to (775, 300)
-        self.top_right = (self.f.graph_size[0] - 225, self.f.graph_size[1] - 100)
+        self.top_right = (self.f.sim_graph_size[0] - 225, self.f.sim_graph_size[1] - 100)
         self.drawing_area = self.graph.draw_rectangle((0,0), self.top_right)
         self.box_width, self.box_height = self.find_box_size()
         self.trial_number = 1
@@ -366,7 +377,6 @@ class roll:
         if b_r is None:
             b_r = (self.box_width, 0)
         if self.prev_roll:
-            print(f"{self.prev_roll.id = }")
             previous_box_id = self.prev_roll.id
             self.graph.TKCanvas.itemconfig(previous_box_id, fill='cyan')
         self.id = self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)

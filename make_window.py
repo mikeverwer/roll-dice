@@ -3,15 +3,10 @@ from classes import mainframe
 
 def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     sg.theme(theme)
-    graph_dimensions = {
-        'x': 1000,
-        'y': 400,
-    }
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Layout
     # ----------------------------------------------------------------------------------------------------------------------
-
     slider_columns = []
     for i in range(1, 7):
         image = sg.Button(image_data=images[f'die{i}'], enable_events=True, key=f'lock{i}')
@@ -69,11 +64,18 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
 
     grid_layout += logging_layout
 
-    dx = 125
-    dy = 50
+    con_dx = 50
+    con_dy = 25
+    con_x = frame.con_graph_size[0]
+    con_y = frame.con_graph_size[1]
+    sim_dx = 125
+    sim_dy = 50
+    sim_x = frame.sim_graph_size[0]
+    sim_y = frame.sim_graph_size[1]
     plots_layout = [
-        [sg.Canvas(size=(600, 300), k='canvas')],
-        [sg.Graph((frame.graph_size[0], frame.graph_size[1]), (-dx, -dy), (1000 - dx, 400 - dy), background_color='white', key = 'simulation graph',
+        [sg.Graph((con_x, con_y), (-con_dx, -con_dy), (con_x - con_dx, con_y - con_dy), background_color='white', key = 'convolution graph',
+                  expand_y=True, enable_events=True)],
+        [sg.Graph((sim_x, sim_y), (-sim_dx, -sim_dy), (sim_x - sim_dx, sim_y - sim_dy), background_color='white', key = 'simulation graph',
                   expand_y=True, enable_events=True)
         ]
     ]
