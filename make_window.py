@@ -15,7 +15,9 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
         column = sg.Column([[image], [slider]], element_justification='right')
         slider_columns.append(column)
 
-
+    # ----------------------------------------------------------------------------------------------------------------------
+    # Main Grid
+    # ----------------------------------------------------------------------------------------------------------------------
     grid_layout = [
         [sg.Text('The Central Limit Theorem      ', font=("Helvetica", 25))],
         [sg.Text('This program showcases the Central Limit Theorem from probability theory.\n\n'
@@ -46,10 +48,14 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
          sg.Text('Number of rolls: '), sg.Input(s=9, default_text=100, k='rolls')],
         [sg.Text(' ' * 6), sg.Button('Show Sum Distribution', k='theory_button', border_width=2, size=(10, 2),
                                      enable_events=True, font='Helvetica 12', button_color='white on orange'),
-         sg.Text(' ' * 39),
+         sg.Text(' ' * 10), sg.Button('Pause'),
          sg.Button('Roll the Bones!', k='go', border_width=2, size=(8, 2), enable_events=True,
                    bind_return_key=True, font='Helvetica 12', button_color='white on green'), sg.Text(' ' * 0)]
     ]
+
+    # ----------------------------------------------------------------------------------------------------------------------
+    # Logging
+    # ----------------------------------------------------------------------------------------------------------------------
 
     logging_layout = [
         [sg.Text(frame.logging_UI_text, font='Courier 10', justification='left', k='outcome_UI_text'), sg.Push()],
@@ -64,12 +70,16 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
 
     grid_layout += logging_layout
 
-    con_dx = 50
-    con_dy = 25
+    # ----------------------------------------------------------------------------------------------------------------------
+    # Graphs 
+    # ----------------------------------------------------------------------------------------------------------------------
+
+    con_dx = frame.con_margins[0][0]
+    con_dy = frame.con_margins[1][0]
     con_x = frame.con_graph_size[0]
     con_y = frame.con_graph_size[1]
-    sim_dx = 125
-    sim_dy = 50
+    sim_dx = frame.sim_margins[0][0]
+    sim_dy = frame.sim_margins[1][0]
     sim_x = frame.sim_graph_size[0]
     sim_y = frame.sim_graph_size[1]
     plots_layout = [
@@ -79,6 +89,10 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
                   expand_y=True, enable_events=True)
         ]
     ]
+
+    # ----------------------------------------------------------------------------------------------------------------------
+    # Finalize
+    # ----------------------------------------------------------------------------------------------------------------------
 
     menu_def = [
         ['&About', ['About', 'The CLT']]

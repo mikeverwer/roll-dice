@@ -243,6 +243,9 @@ def main():
             except ValueError as ve:
                 sg.Popup(f'Value Error: {ve}')
         
+        elif event == 'Pause':
+            mf.simulate = not mf.simulate
+        
         elif event == 'simulation graph':
             print(f"[LOG] pressed {event}: {mf.values[event]}")
             if selelect_box_id:

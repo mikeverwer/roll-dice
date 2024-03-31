@@ -8,6 +8,7 @@
 - rework the window
   . make convolution display smaller, where log is now
   . raise simulation graph and add controls/roll display below
+  . Add roll display graph, maybe even animate the rolls with different dice png's
 
 ## High priority
 

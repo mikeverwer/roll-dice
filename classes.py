@@ -21,7 +21,9 @@ class mainframe:
         self.convoluted_distribution = self.create_convoluted_distribution(self.dice, get_var=True)
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 64
+        self.sim_margins: list[list[int]] = [[150, 75], [50, 50]]  #(left, right), (bottom, top)
         self.sim_graph_size = (1000, 400)
+        self.con_margins: list[list[int]] = [[25, 25], [25, 10]]  #(left, right), (bottom, top)
         self.con_graph_size = (400, 300)
         self.con_graph = None
         self.extra_space = 0
@@ -88,9 +90,13 @@ class mainframe:
     def create_convoluted_distribution(self, dice=None, get_var=False, draw=False):
         if dice is None:
             dice = int(self.values['dice'])
-        convoluted_distribution = self.die_distribution
+        if sum(self.die_distribution) != 1:
+            static_dist = [x / 100 for x in self.die_distribution]
+        else:
+            static_dist = self.die_distribution
+        convoluted_distribution = static_dist
         for _ in range(dice - 1):
-            convoluted_distribution = np.convolve(convoluted_distribution, self.die_distribution)
+            convoluted_distribution = np.convolve(convoluted_distribution, static_dist)
         # all possible outcomes
         outcomes = list(range(dice, 6 * dice))
         if get_var:
@@ -202,23 +208,34 @@ class mainframe:
                 self.window[active_slider_key].update(slider_values[active_face - 1])
 
             self.mean_and_deviation(slider_values)
-            self.die_distribution = [_ / 100 for _ in slider_values]
+            self.die_distribution = [_ for _ in slider_values]
 
         else:  # Slider is locked, keep value constant
             self.values[event] = self.locked_values[int(event[-1]) - 1]
             self.window[event].update(self.values[event])
 
 
+class convolution:
+    def __init__(self, frame: mainframe):
+        self.f = frame
+        self.dist = frame.convoluted_distribution
+        self.graph = self.f.window['convolution graph']
+        self.bins = [i for i in range (1, 7)]
+
+
+
 class simulation:
-    def __init__(self, frame: mainframe, axis=None):
+    def __init__(self, frame: mainframe):
+        print('Beginning the simulation, enjoy!')
         # inheritance
         self.f = frame
         self.graph = self.f.window['simulation graph']
-        self.dist = self.f.die_distribution
+        self.dist = [x / 100 for x in self.f.die_distribution]
         self.number_of_rolls = int(self.f.values['rolls'])
         self.number_of_dice = int(self.f.values['dice'])
-        self.partition = self.make_partition()
         # child
+        self.f.window['log'].update(value='')
+        self.partition = self.make_partition()
         self.possible_outcomes = list(range(self.number_of_dice - 1, (6 * self.number_of_dice) + 1))
         self.outcome_counter: dict[int: int] = {}
         self.trim_outcomes()
@@ -226,11 +243,11 @@ class simulation:
         self.convolution = self.f.create_convoluted_distribution(self.number_of_dice, get_var=True, draw=False)
         # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
         # Current Drawing Area, (x, y) = (1000, 400) ==> (0, 0) to (775, 300)
-        self.top_right = (self.f.sim_graph_size[0] - 225, self.f.sim_graph_size[1] - 100)
+
+        self.top_right = (self.f.sim_graph_size[0] - sum(self.f.sim_margins[0]), self.f.sim_graph_size[1] - sum(self.f.sim_margins[1]))
         self.drawing_area = self.graph.draw_rectangle((0,0), self.top_right)
         self.box_width, self.box_height = self.find_box_size()
         self.trial_number = 1
-        self.xaxis = axis
     
     def trim_outcomes(self):
         feasible_outcomes = self.possible_outcomes
@@ -281,13 +298,16 @@ class simulation:
         print(f'{highest_probability = }', end=" : ")
         approx_most_outcomes = self.number_of_rolls * highest_probability * 1.5
         if self.number_of_rolls <= 199 and self.number_of_dice > 8:
-            approx_most_outcomes * 2.25
+            approx_most_outcomes *= 2.25
         if self.number_of_rolls > 199:
-            approx_most_outcomes * 0.75
+            approx_most_outcomes *= 0.75
         if self.number_of_rolls > 499:
-            approx_most_outcomes * 0.5
+            approx_most_outcomes *= 0.5
+        approx_most_outcomes = int(approx_most_outcomes)
         print(f'{approx_most_outcomes = }')
         box_height = self.top_right[1] // approx_most_outcomes
+        worst_case = approx_most_outcomes * box_height
+        print(f"{worst_case = }")
         if box_height < 2:
             box_height = 2
         if box_height > 0.10 * self.top_right[1]:
@@ -297,7 +317,7 @@ class simulation:
         return box_width, box_height
  
     def draw_axis(self):
-        ticks = [item for item in self.xaxis]
+        ticks = None
 
     def make_partition(self, distribution=None):
         if distribution is None:
