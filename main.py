@@ -112,6 +112,12 @@ def main():
     mf = mainframe(images)  # MainFrame object, see classes.py
     window = make.mainframe(sg, images, theme='Default1', frame=mf)
     mf.window = window
+    mf.con_graph = mf.window['convolution graph']
+    mf.convolution.graph = mf.con_graph
+    print(f"{mf.con_graph = }")
+    print(f"{mf.convolution.graph = }")
+    mf.convolution.make_bars()
+
 
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
@@ -125,6 +131,8 @@ def main():
     while True:
         event, mf.values = mf.window.read(timeout = 1000 // mf.update_interval)
         sim_graph = mf.window['simulation graph']
+        mf.con_graph = mf.window['convolution graph']
+        mf.convolution.graph = mf.con_graph
 
         if event in (None, 'Exit'):
             break
@@ -191,15 +199,9 @@ def main():
             mf.die_distribution = [mf.values[f'face{i}'] for i in range(1, 7)]
             mf.mean_and_deviation(update=True)
 
-        elif event == 'up' or event == 'down':
-            if event == 'up':
-                new_dice = int(mf.values['dice']) + 1
-                mf.values['dice'] = new_dice
-                mf.window['dice'].update(value=new_dice)
-            else:
-                new_dice = int(mf.values['dice']) - 1 if int(mf.values['dice']) > 1 else 1
-                mf.values['dice'] = new_dice
-                mf.window['dice'].update(value=new_dice)
+        elif event == 'up' or event == 'down' or event == 'dice':
+            delta = 1 if event == 'up' else -1
+            mf.dice_change(mf.dice + delta)
 
         elif event == 'theory_button':  # Make the theoretical distribution plot
             # Get the number of dice to roll

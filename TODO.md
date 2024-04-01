@@ -14,6 +14,12 @@
 
 ### Simulation Complete
 
+### Convolution Class
+
+- migrate all convolution related functions from mainframe to convolution
+  . trim_outcomes
+  . create_distribution
+
 #### Pre-Simulation checklist
 
 - Enough Space?

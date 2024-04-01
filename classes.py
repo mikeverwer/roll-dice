@@ -18,7 +18,6 @@ class mainframe:
         }
         self.die_distribution = self.random_distribution(get_var=True)
         self.dice = 3
-        self.convoluted_distribution = self.create_convoluted_distribution(self.dice, get_var=True)
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 64
         self.sim_margins: list[list[int]] = [[150, 75], [50, 50]]  #(left, right), (bottom, top)
@@ -29,6 +28,8 @@ class mainframe:
         self.extra_space = 0
         self.logging_UI_text = ' '
         self.simulate = False
+        self.convolution = convolution(self)
+        self.convoluted_distribution = self.create_convoluted_distribution(self.dice, get_var=True)
         print(f'Complete!\nStarting die distribution: {self.die_distribution}')
         
 
@@ -111,7 +112,6 @@ class mainframe:
             dist = self.convoluted_distribution
 
 
-
     def add_preset(self, new_preset: str):
         self.preset_list.append(new_preset)
         self.presets[new_preset] = self.die_distribution
@@ -139,6 +139,7 @@ class mainframe:
 
         self.die_distribution = slider_values
         self.mean_and_deviation(slider_values)
+        self.convolution = convolution(self)
 
 
     def activate_slider(self, event, active_face=None, set_to_value=None):
@@ -209,18 +210,159 @@ class mainframe:
 
             self.mean_and_deviation(slider_values)
             self.die_distribution = [_ for _ in slider_values]
+            self.convolution = convolution(self)
 
         else:  # Slider is locked, keep value constant
             self.values[event] = self.locked_values[int(event[-1]) - 1]
             self.window[event].update(self.values[event])
 
 
+    def dice_change(self, value=None):
+        if value is None:
+            value = self.dice
+        self.dice = value if value > 0 else 1
+        self.window['dice'].update(value=self.dice)
+        self.convolution = convolution(self)
+
 class convolution:
     def __init__(self, frame: mainframe):
+        print('Making Convolution')
         self.f = frame
-        self.dist = frame.convoluted_distribution
-        self.graph = self.f.window['convolution graph']
-        self.bins = [i for i in range (1, 7)]
+        self.bins: list[bar] = []
+        self.die_dist = frame.die_distribution
+        self.graph = frame.con_graph
+        if sum(self.die_dist) != 1:
+            self.die_dist = [x / 100 for x in self.die_dist]
+        else:
+            self.die_dist = self.die_distribution
+        self.number_of_dice = self.f.dice
+        # all possible outcomes
+        self.possible_outcomes = list(range(self.number_of_dice - 1, (6 * self.number_of_dice) + 1))
+        self.conv_dist = self.create_convoluted_distribution(get_var=True)
+        self.trim_outcomes()
+        self.bin_width = 1
+        self.scalar = 1
+        if self.graph:
+            self.make_bars()
+
+    def create_convoluted_distribution(self, dice=None, get_var=False):
+        if dice is None:
+            dice = int(self.number_of_dice)
+        convoluted_distribution = self.die_dist
+        for _ in range(dice - 1):
+            convoluted_distribution = np.convolve(convoluted_distribution, self.die_dist)
+        # all possible outcomes
+        outcomes = list(range(dice, 6 * dice))
+        if get_var:
+            return convoluted_distribution
+        else: 
+            self.conv_dist = convoluted_distribution
+
+    def trim_outcomes(self):
+        feasible_outcomes = self.possible_outcomes
+        # feasible outcomes, within 3.5 st. dev.'s from the mean
+        # outcomes = list(range(int(mean - (3.5 * deviation)), int(mean + (3.5 * deviation))))  
+
+        # Check: values in distribution[int(mean - (5.5 * deviation))] and distribution[int(mean + (5.5 * deviation))] ~ 0?
+        #        Need to handle boundary checking.
+        # Trim outcomes and distribution accordingly
+
+        # left_border_index = int(mean - (5.5 * deviation))
+        # print(f'{left_border_index = }')
+        # left_border_index = 0 if left_border_index < 0 else left_border_index
+        # right_border_index = int(mean + (5.5 * deviation))
+        # print(f'{right_border_index = }')
+        # right_border_index = len(outcomes) - 1 if right_border_index > len(outcomes) - 1 else right_border_index
+        # tol = 1e-4
+        # print(f"{left_border_index = }, {right_border_index = }")
+        # print(f"  y at {left_border_index} = {distribution[left_border_index]},\n  y at {right_border_index} = {distribution[right_border_index]}")
+        # print('original outcomes:')
+        # print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }")
+        # if distribution[left_border_index] < tol and distribution[right_border_index] > tol and left_border_index > 0:
+        #     distribution = distribution[left_border_index:]
+        #     outcomes = outcomes[left_border_index:]
+        #     print('trimming LEFT border only')
+        #     print('new outcomes:')
+        #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+        # elif distribution[left_border_index] > tol and distribution[right_border_index] < tol and right_border_index < len(outcomes) - 1:
+        #     distribution = distribution[:right_border_index]
+        #     outcomes = outcomes[:right_border_index]
+        #     print('trimming RIGHT border only')
+        #     print('new outcomes:')
+        #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+        # elif distribution[left_border_index] < tol and distribution[right_border_index] < tol:
+        #     distribution = distribution[left_border_index:right_border_index]
+        #     outcomes = outcomes[left_border_index:right_border_index]
+        #     print('trimming BOTH borders')
+        #     print('new outcomes:')
+        #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+        # else:
+        #     print('No trim needed')
+        return feasible_outcomes
+ 
+    
+    def find_sizes(self):
+        bins = len(self.conv_dist)
+        self.bin_width = self.top_right[0] // bins
+        highest_probability = max(self.conv_dist)
+        highest_point = self.top_right[1] * 0.9
+        self.scalar = highest_point / highest_probability
+    
+    def make_bars(self):
+        self.graph.erase()
+        self.bins: list[bar] = []
+        self.graph = self.f.con_graph
+        self.top_right = (self.f.con_graph_size[0] - sum(self.f.con_margins[0]), self.f.con_graph_size[1] - sum(self.f.con_margins[1]))
+        self.graph.draw_rectangle((0, 0), self.top_right)
+        # find grid points
+        self.find_sizes()
+        for i, x in enumerate(self.conv_dist):
+            height = x * self.scalar
+            x_location = i * self.bin_width
+            bin_number = i + self.number_of_dice
+            new_bar = bar(graph=self.graph, bin=bin_number, size=(self.bin_width, height), coord=x_location)
+            self.bins.append(new_bar)
+
+
+class bar:
+    def __init__(self, graph, bin, size, coord):
+        self.graph = graph
+        self.bin = bin
+        self.size = size
+        self.x_coord = coord
+        self.hitbox = self.make_hitbox()  # (top-left, bottom-right)
+        self.display = False
+        self.draw_bar(*self.hitbox)
+    
+    def make_hitbox(self):
+        top_left = (self.x_coord, self.size[1])
+        bottom_right = (self.x_coord + self.size[0], 0)
+        return top_left, bottom_right
+    
+        
+    def draw_bar(self, t_l=None, b_r=None, fill='RoyalBlue4'):
+        if t_l is None:
+            t_l = (0, self.size[1])
+        if b_r is None:
+            b_r = (self.size[0], 0)
+        self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
+
+    def is_hit(self, click: tuple, xoffset: int = 0, yoffset: int = 0, offset: None | int = None):
+        if offset is not None:
+            xoffset = offset
+            yoffset = offset
+        if click:
+            half_length = abs(self.hitbox[0][0] - self.hitbox[1][0]) / 2
+            half_height = abs(self.hitbox[0][1] - self.hitbox[1][1]) / 2
+            center = (self.px_coord[0] + half_length, self.px_coord[1] + half_height)
+            dx = abs(click[0] - center[0])
+            dy = abs(click[1] - center[1])
+            if dx - half_length <= xoffset and dy - half_height <= yoffset:
+                return True
+            else:
+                return False
+        else:
+            return False
 
 
 
@@ -234,13 +376,13 @@ class simulation:
         self.number_of_rolls = int(self.f.values['rolls'])
         self.number_of_dice = int(self.f.values['dice'])
         # child
-        self.f.window['log'].update(value='')
+        # self.f.window['log'].update(value='')
         self.partition = self.make_partition()
         self.possible_outcomes = list(range(self.number_of_dice - 1, (6 * self.number_of_dice) + 1))
         self.outcome_counter: dict[int: int] = {}
-        self.trim_outcomes()
         self.rolls: list[roll] = []
-        self.convolution = self.f.create_convoluted_distribution(self.number_of_dice, get_var=True, draw=False)
+        self.convolution = self.f.convolution.conv_dist       
+        self.outcome_counter = {outcome: 0 for outcome in self.possible_outcomes}
         # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
         # Current Drawing Area, (x, y) = (1000, 400) ==> (0, 0) to (775, 300)
 
@@ -249,60 +391,11 @@ class simulation:
         self.box_width, self.box_height = self.find_box_size()
         self.trial_number = 1
     
-    def trim_outcomes(self):
-        feasible_outcomes = self.possible_outcomes
-        # feasible outcomes, within 3.5 st. dev.'s from the mean
-    # outcomes = list(range(int(mean - (3.5 * deviation)), int(mean + (3.5 * deviation))))  
-
-    # Check: values in distribution[int(mean - (5.5 * deviation))] and distribution[int(mean + (5.5 * deviation))] ~ 0?
-    #        Need to handle boundary checking.
-    # Trim outcomes and distribution accordingly
-
-    # left_border_index = int(mean - (5.5 * deviation))
-    # print(f'{left_border_index = }')
-    # left_border_index = 0 if left_border_index < 0 else left_border_index
-    # right_border_index = int(mean + (5.5 * deviation))
-    # print(f'{right_border_index = }')
-    # right_border_index = len(outcomes) - 1 if right_border_index > len(outcomes) - 1 else right_border_index
-    # tol = 1e-4
-    # print(f"{left_border_index = }, {right_border_index = }")
-    # print(f"  y at {left_border_index} = {distribution[left_border_index]},\n  y at {right_border_index} = {distribution[right_border_index]}")
-    # print('original outcomes:')
-    # print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }")
-    # if distribution[left_border_index] < tol and distribution[right_border_index] > tol and left_border_index > 0:
-    #     distribution = distribution[left_border_index:]
-    #     outcomes = outcomes[left_border_index:]
-    #     print('trimming LEFT border only')
-    #     print('new outcomes:')
-    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
-    # elif distribution[left_border_index] > tol and distribution[right_border_index] < tol and right_border_index < len(outcomes) - 1:
-    #     distribution = distribution[:right_border_index]
-    #     outcomes = outcomes[:right_border_index]
-    #     print('trimming RIGHT border only')
-    #     print('new outcomes:')
-    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
-    # elif distribution[left_border_index] < tol and distribution[right_border_index] < tol:
-    #     distribution = distribution[left_border_index:right_border_index]
-    #     outcomes = outcomes[left_border_index:right_border_index]
-    #     print('trimming BOTH borders')
-    #     print('new outcomes:')
-    #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
-    # else:
-    #     print('No trim needed')
-        
-        self.outcome_counter = {outcome: 0 for outcome in self.possible_outcomes}
-        return feasible_outcomes
-    
     def find_box_size(self):
+        # should be a smooth function from 3px to x% of drawing area
         highest_probability = float(max(self.convolution))
         print(f'{highest_probability = }', end=" : ")
         approx_most_outcomes = self.number_of_rolls * highest_probability * 1.5
-        if self.number_of_rolls <= 199 and self.number_of_dice > 8:
-            approx_most_outcomes *= 2.25
-        if self.number_of_rolls > 199:
-            approx_most_outcomes *= 0.75
-        if self.number_of_rolls > 499:
-            approx_most_outcomes *= 0.5
         approx_most_outcomes = int(approx_most_outcomes)
         print(f'{approx_most_outcomes = }')
         box_height = self.top_right[1] // approx_most_outcomes
@@ -337,7 +430,7 @@ class simulation:
             prev_roll = None
         else:
             prev_roll = self.rolls[count - 2]  # - 2 since count starts at 1, but rolls index starts at 0
-        this_roll = roll(self.f, roll_number=count, partition=self.partition, counter=counter, box_size=box_size, 
+        this_roll = roll(self, roll_number=count, partition=self.partition, counter=counter, box_size=box_size, 
                          graph=graph, dice=self.number_of_dice, previous_roll=prev_roll)
         self.rolls.append(this_roll)
         print(this_roll.outcome)
