@@ -122,7 +122,8 @@ def main():
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
     dice = 3
-    selelect_box_id = None
+    selected_roll_id = None
+    selected_bar_id = None
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Event Loop
@@ -203,37 +204,6 @@ def main():
             delta = 1 if event == 'up' else -1
             mf.dice_change(mf.dice + delta)
 
-        elif event == 'theory_button':  # Make the theoretical distribution plot
-            # Get the number of dice to roll
-            try:
-                previous_distribution = mf.die_distribution
-                previous_dice = dice
-                dice = int(mf.values['dice'])
-
-                # Convolve the single die distribution with itself 'dice' times
-                # to find the probability distribution of rolling all the desired dice
-                convoluted_distribution = mf.die_distribution
-                for _ in range(dice - 1):
-                    convoluted_distribution = np.convolve(convoluted_distribution, mf.die_distribution)
-
-                # Create plot of theoretical distribution
-                plt.figure(figsize=(10, 4))
-                # create_dice_distribution_plot(die_distribution, face_totals, die_mean, die_standard_deviation)
-                mf.window['log'].update(value="")
-                conv_mean, conv_deviation = mf.mean_and_deviation(distribution=convoluted_distribution, update=False, dice=dice)
-                create_convoluted_distribution_plot(distribution=convoluted_distribution, number_of_dice=dice, mean=conv_mean,
-                                                    deviation=conv_deviation)
-                fig = plt.gcf()
-
-                # Draw the plot if related inputs changed
-                if mf.die_distribution != previous_distribution or dice != previous_dice:
-                    if fig_canvas_matlab_convolve is not None:
-                        clear_canvas(fig_canvas_matlab_convolve)
-                    fig_canvas_matlab_convolve = draw_figure(mf.window['canvas'].TKCanvas, fig)
-
-            except ValueError as ve:
-                sg.Popup(f'Value Error: {ve}')
-
         elif event == 'go':  # Run the show
             # Get the number of dice to roll and rolls to perform
             try:
@@ -247,19 +217,34 @@ def main():
         
         elif event == 'Pause':
             mf.simulate = not mf.simulate
+
+        elif event == 'convolution graph':
+            print(f"[LOG] pressed {event}: {mf.values[event]}")
+            if selected_bar_id:
+                mf.con_graph.delete_figure(selected_bar_id)
+                selected_bar_id = None
+            click = mf.values[event]
+            found = False
+            for bar in mf.convolution.bins:
+                if not found:
+                    if bar.is_hit(click):
+                        found = True
+                        selected_bar_id = mf.con_graph.draw_rectangle(bar.hitbox[0], bar.hitbox[1], 'magenta')
+                        print(f'hit bar {bar.bin}')
+
         
         elif event == 'simulation graph':
             print(f"[LOG] pressed {event}: {mf.values[event]}")
-            if selelect_box_id:
-                sim_graph.delete_figure(selelect_box_id)
-                selelect_box_id = None
+            if selected_roll_id:
+                sim_graph.delete_figure(selected_roll_id)
+                selected_roll_id = None
             click = mf.values[event]
             found = False
             for roll_obj in sim.rolls:
                 if not found:
                     if roll_obj.is_hit(click):
                         found = True
-                        selelect_box_id = sim_graph.draw_rectangle(roll_obj.hitbox[0], roll_obj.hitbox[1], 'magenta')
+                        selected_roll_id = sim_graph.draw_rectangle(roll_obj.hitbox[0], roll_obj.hitbox[1], 'magenta')
                         print(f'hit roll {roll_obj.roll_number}')
 
         

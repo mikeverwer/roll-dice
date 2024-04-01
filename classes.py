@@ -21,9 +21,9 @@ class mainframe:
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 64
         self.sim_margins: list[list[int]] = [[150, 75], [50, 50]]  #(left, right), (bottom, top)
-        self.sim_graph_size = (1000, 400)
+        self.sim_graph_size = (1000, 800)
         self.con_margins: list[list[int]] = [[25, 25], [25, 10]]  #(left, right), (bottom, top)
-        self.con_graph_size = (400, 300)
+        self.con_graph_size = (450, 300)
         self.con_graph = None
         self.extra_space = 0
         self.logging_UI_text = ' '
@@ -354,7 +354,7 @@ class bar:
         if click:
             half_length = abs(self.hitbox[0][0] - self.hitbox[1][0]) / 2
             half_height = abs(self.hitbox[0][1] - self.hitbox[1][1]) / 2
-            center = (self.px_coord[0] + half_length, self.px_coord[1] + half_height)
+            center = (self.hitbox[0][0] + half_length, self.hitbox[1][1] + half_height)
             dx = abs(click[0] - center[0])
             dy = abs(click[1] - center[1])
             if dx - half_length <= xoffset and dy - half_height <= yoffset:

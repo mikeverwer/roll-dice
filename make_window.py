@@ -46,9 +46,7 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
              [sg.Button(image_data=frame.images['down'], key='down')]
          ], element_justification="left"),
          sg.Text('Number of rolls: '), sg.Input(s=9, default_text=100, k='rolls')],
-        [sg.Text(' ' * 6), sg.Button('Show Sum Distribution', k='theory_button', border_width=2, size=(10, 2),
-                                     enable_events=True, font='Helvetica 12', button_color='white on orange'),
-         sg.Text(' ' * 10), sg.Button('Pause'),
+        [sg.Text(' ' * 30), sg.Button('Pause'),
          sg.Button('Roll the Bones!', k='go', border_width=2, size=(8, 2), enable_events=True,
                    bind_return_key=True, font='Helvetica 12', button_color='white on green'), sg.Text(' ' * 0)]
     ]
@@ -67,7 +65,12 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
          sg.Push()]
     ]
 
-    grid_layout += logging_layout
+    # ----------------------------------------------------------------------------------------------------------------------
+    # Simulation Interface
+    # ----------------------------------------------------------------------------------------------------------------------
+    sim_inter_layout = [
+        [],
+    ]
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Graphs 
@@ -80,9 +83,11 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     sim_dy = frame.sim_margins[1][0]
     sim_x = frame.sim_graph_size[0]
     sim_y = frame.sim_graph_size[1]
+
+    convolution_graph_layout = [[sg.Push(), sg.Graph((con_x, con_y), (-con_dx, -con_dy), (con_x - con_dx, con_y - con_dy), background_color='white', key = 'convolution graph',
+                  expand_y=True, enable_events=True), sg.Push()]]
+
     plots_layout = [
-        [sg.Graph((con_x, con_y), (-con_dx, -con_dy), (con_x - con_dx, con_y - con_dy), background_color='white', key = 'convolution graph',
-                  expand_y=True, enable_events=True)],
         [sg.Graph((sim_x, sim_y), (-sim_dx, -sim_dy), (sim_x - sim_dx, sim_y - sim_dy), background_color='white', key = 'simulation graph',
                   expand_y=True, enable_events=True)
         ]
@@ -90,10 +95,16 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Finalize
-    # ----------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------    
     menu_def = [
         ['&About', ['About', 'The CLT']]
     ]
+
+    grid_layout += [[sg.TabGroup([[sg.Tab('Sum Distribution', layout=convolution_graph_layout, k='dist tab'),
+                                   sg.Tab('    Log    ', logging_layout, k='log tab')
+                                   ]]
+                                ),
+    ]]
 
     layout = [
         [sg.Menu(menu_def, key='menu'), sg.Text('')],
