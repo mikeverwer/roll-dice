@@ -36,10 +36,10 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
                 sg.Button("Add", k='add preset', p=((0, 50), (0, 0))),
                 sg.Button('Randomize', button_color='cyan'), sg.Push()],
                 [sg.Text('', font='Courier 1')],
-            ], font='Helvetica 12 bold',)
+            ], font='Helvetica 12 bold', k='die inputs frame')
         ],
         [sg.Frame(title='', relief='raised', layout=[
-                [sg.Text('Number of dice to roll: ', font='Helvetica 12 bold'), sg.Input(s=4, default_text=3, justification='right', k='dice'),
+                [sg.Text('Number of dice to roll: ', font='Helvetica 12 bold'), sg.Input(s=4, default_text=frame.dice, justification='right', k='dice'),
                 sg.Column([
                     [sg.Button(image_data=frame.images['up'], key='up')],
                     [sg.Button(image_data=frame.images['down'], key='down')]
@@ -106,10 +106,10 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
 
     plots_layout += sim_inter_layout
 
-    grid_layout += [[sg.TabGroup([[sg.Tab('Sum Distribution', layout=convolution_graph_layout, k='dist tab'),
+    grid_layout += [[sg.TabGroup([[sg.Tab(frame.convolution_title, layout=convolution_graph_layout, k='dist tab'),
                                    sg.Tab('    Log    ', logging_layout, k='log tab')
-                                   ]]
-                                ),
+                                   ]],
+                                font='Helvetica 12 bold', focus_color='white'),
     ]]
 
     layout = [

@@ -30,6 +30,7 @@ class mainframe:
         self.simulate = False
         self.convolution = convolution(self)
         self.convoluted_distribution = self.create_convoluted_distribution(self.dice, get_var=True)
+        self.convolution_title = f' The Probability Distribution for the Sum of {self.dice} Dice '
         print(f'Complete!\nStarting die distribution: {self.die_distribution}')
         
 
@@ -222,6 +223,7 @@ class mainframe:
             value = self.dice
         self.dice = value if value > 0 else 1
         self.window['dice'].update(value=self.dice)
+        self.window['dist tab'].update(title=f' The Probability Distribution for the Sum of {self.dice} Dice ')
         self.convolution = convolution(self)
 
 
@@ -364,6 +366,9 @@ class bar:
                 return False
         else:
             return False
+    
+    def display(self):
+        return
 
 
 

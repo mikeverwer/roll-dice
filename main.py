@@ -118,6 +118,7 @@ def main():
     print(f"{mf.convolution.graph = }")
     mf.convolution.make_bars()
     sim = None
+    mf.window['die inputs frame'].grab_anywhere_exclude()
 
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
