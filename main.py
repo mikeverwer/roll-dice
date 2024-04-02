@@ -117,11 +117,10 @@ def main():
     print(f"{mf.con_graph = }")
     print(f"{mf.convolution.graph = }")
     mf.convolution.make_bars()
-
+    sim = None
 
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
-    dice = 3
     selected_roll_id = None
     selected_bar_id = None
 
@@ -215,7 +214,7 @@ def main():
             except ValueError as ve:
                 sg.Popup(f'Value Error: {ve}')
         
-        elif event == 'Pause':
+        elif event == 'Pause' and sim:
             mf.simulate = not mf.simulate
 
         elif event == 'convolution graph':
@@ -233,7 +232,7 @@ def main():
                         print(f'hit bar {bar.bin}')
 
         
-        elif event == 'simulation graph':
+        elif event == 'simulation graph' and sim:
             print(f"[LOG] pressed {event}: {mf.values[event]}")
             if selected_roll_id:
                 sim_graph.delete_figure(selected_roll_id)

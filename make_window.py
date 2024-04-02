@@ -20,17 +20,16 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
     grid_layout = [
         [sg.Text('The Central Limit Theorem      ', font=("Helvetica", 25))],
-        [sg.Text('This program showcases the Central Limit Theorem from probability theory.\n\n'
-                 'Use the sliders to set a probability distribution for the dice. Then input the\n'
-                 'number of dice to be thrown in each roll, and the number of rolls to perform.')],
         [sg.Frame('Dice Distribution  |  Click on a die face to lock its value', layout=[
+                [sg.Text('Use the sliders to set a probability distribution for the dice. Then input the\n'
+                 'number of dice to be thrown in each roll, and the number of rolls to perform.', font='helvetica 10')],
                 [sg.Push(),
                 sg.Frame('', layout=[
                     [sg.Text(f'Mean: {frame.mean:.2f}', font='helvetica 10 bold', background_color='light cyan', k='mean'),
                     sg.Text(f'Standard Deviation: {frame.deviation:.2f}', k='deviation', font='helvetica 10 bold', background_color='light cyan')]
                     ], relief='raised', background_color='light cyan'), sg.Push()
                 ],
-                slider_columns,
+                slider_columns, 
                 [sg.Text('_' * 57)],
                 [sg.Push(), sg.Text('Preset Distributions'), sg.Combo(frame.preset_list, default_value=None, size=(10, 10),
                                                             enable_events=True, readonly=False, k='preset'),
@@ -39,16 +38,16 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
                 [sg.Text('', font='Courier 1')],
             ], font='Helvetica 12 bold',)
         ],
-        [sg.Text('', font='Courier 1')],
-        [sg.Text('Number of dice to roll: '), sg.Input(s=4, default_text=3, justification='right', k='dice'),
-         sg.Column([
-             [sg.Button(image_data=frame.images['up'], key='up')],
-             [sg.Button(image_data=frame.images['down'], key='down')]
-         ], element_justification="left"),
-         sg.Text('Number of rolls: '), sg.Input(s=9, default_text=100, k='rolls')],
-        [sg.Text(' ' * 30), sg.Button('Pause'),
-         sg.Button('Roll the Bones!', k='go', border_width=2, size=(8, 2), enable_events=True,
-                   bind_return_key=True, font='Helvetica 12', button_color='white on green'), sg.Text(' ' * 0)]
+        [sg.Frame(title='', relief='raised', layout=[
+                [sg.Text('Number of dice to roll: ', font='Helvetica 12 bold'), sg.Input(s=4, default_text=3, justification='right', k='dice'),
+                sg.Column([
+                    [sg.Button(image_data=frame.images['up'], key='up')],
+                    [sg.Button(image_data=frame.images['down'], key='down')]
+                ], element_justification="left")]
+            ]
+         )
+        ]
+        
     ]
 
     # ----------------------------------------------------------------------------------------------------------------------
@@ -68,9 +67,14 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
     # Simulation Interface
     # ----------------------------------------------------------------------------------------------------------------------
-    sim_inter_layout = [
-        [],
-    ]
+    sim_inter_layout = [[sg.Column(layout=[
+                [sg.Text('Number of rolls: '), sg.Input(s=9, default_text=100, k='rolls')],
+                [sg.Button('Pause', font='Helvetica 12', size=(8, 2), border_width=4),
+                sg.Button('Roll the Bones!', k='go', border_width=2, size=(8, 2), enable_events=True,
+                        bind_return_key=True, font='Helvetica 12', button_color='white on green'), sg.Text(' ' * 0)],
+            ],
+        )
+    ]]
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Graphs 
@@ -100,6 +104,8 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
         ['&About', ['About', 'The CLT']]
     ]
 
+    plots_layout += sim_inter_layout
+
     grid_layout += [[sg.TabGroup([[sg.Tab('Sum Distribution', layout=convolution_graph_layout, k='dist tab'),
                                    sg.Tab('    Log    ', logging_layout, k='log tab')
                                    ]]
@@ -119,7 +125,7 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
 
     window = sg.Window(
-        'CLT Demonstration', layout, default_element_size=(55, 1), grab_anywhere=True, finalize=True)  # was (60, 1)
+        'CLT Demonstration', layout, default_element_size=(55, 1), grab_anywhere=True, finalize=True, font='helvetica 10 bold')  # was (60, 1)
     
     # ----------------------------------------------------------------------------------------------------------------------
     # Hotkeys

@@ -17,11 +17,11 @@ class mainframe:
                'Hill': [2, 12, 40, 38, 7, 1]
         }
         self.die_distribution = self.random_distribution(get_var=True)
-        self.dice = 3
+        self.dice = 1
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 64
         self.sim_margins: list[list[int]] = [[150, 75], [50, 50]]  #(left, right), (bottom, top)
-        self.sim_graph_size = (1000, 800)
+        self.sim_graph_size = (1000, 650)
         self.con_margins: list[list[int]] = [[25, 25], [25, 10]]  #(left, right), (bottom, top)
         self.con_graph_size = (450, 300)
         self.con_graph = None
@@ -224,6 +224,7 @@ class mainframe:
         self.window['dice'].update(value=self.dice)
         self.convolution = convolution(self)
 
+
 class convolution:
     def __init__(self, frame: mainframe):
         print('Making Convolution')
@@ -305,7 +306,7 @@ class convolution:
         bins = len(self.conv_dist)
         self.bin_width = self.top_right[0] // bins
         highest_probability = max(self.conv_dist)
-        highest_point = self.top_right[1] * 0.9
+        highest_point = self.top_right[1] * 0.75
         self.scalar = highest_point / highest_probability
     
     def make_bars(self):
