@@ -9,6 +9,8 @@
 
 ## High priority
 
+- make axes for both graphs, think about partitioning the percentage.
+
 ### Convolution Class
 
 - migrate all convolution related functions from mainframe to convolution
