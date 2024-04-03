@@ -109,6 +109,7 @@ class mainframe:
         if draw:
             self.draw_convoluted_distribution(convoluted_distribution)
 
+
     def draw_convoluted_distribution(self, dist=None):
         if dist is None:
             dist = self.convoluted_distribution
@@ -125,9 +126,11 @@ class mainframe:
         self.locked_values[active_lock - 1] = self.values[f'face{active_lock}']
         self.locks[active_lock - 1] = not self.locks[active_lock - 1]
         if self.locks[active_lock - 1]:
-            self.window[f'lock{active_lock}'].update(image_data=self.images[f'lock{active_lock}'])
+            b64_image_data = getattr(self.images, f'lock{active_lock}')
+            self.window[f'lock{active_lock}'].update(image_data=b64_image_data)
         else:
-            self.window[f'lock{active_lock}'].update(image_data=self.images[f'die{active_lock}'])
+            b64_image_data = getattr(self.images, f'die{active_lock}')
+            self.window[f'lock{active_lock}'].update(image_data=b64_image_data)
             self.locked_values[active_lock - 1] = 0
 
 
@@ -135,7 +138,8 @@ class mainframe:
         for i in range(1, 7):  # Update sliders and locks
             if self.locks[i - 1] and reset_locks is True:  # Reset locks
                 self.locks[i - 1] = False
-                self.window[f'lock{i}'].update(image_data=self.images[f'die{i}'])
+                b64_image_data = getattr(self.images, f'die{i}')
+                self.window[f'lock{i}'].update(image_data=b64_image_data)
             self.values[f'face{i}'] = slider_values[i - 1]
             self.window[f'face{i}'].update(self.values[f'face{i}'])
 
@@ -179,8 +183,7 @@ class mainframe:
                 adjustment = 100 - total
                 slider_values[active_face - 1] += adjustment
                 self.window[active_slider_key].update(slider_values[active_face - 1])
-
-    
+  
             # The unlocked sliders were all 0 and the active slider was reduced; increase an unlocked slider
             elif unlocked_sum == 0 and total < 100:
                 next_unlocked_face = None
@@ -204,12 +207,13 @@ class mainframe:
                     self.values[f'face{next_unlocked_face}'] = 100 - active_slider_value
                     self.window[f'face{next_unlocked_face}'].update(self.values[f'face{next_unlocked_face}'])
 
-            #  The unlocked sliders were all 0 and the active slider was increased; decrease active slider
+            # The unlocked sliders were all 0 and the active slider was increased; decrease active slider
             elif unlocked_sum == 0 and total > 100:
                 adjustment = 100 - total
                 slider_values[active_face - 1] += adjustment
                 self.window[active_slider_key].update(slider_values[active_face - 1])
 
+            # Finished moving, update related objects
             self.mean_and_deviation(slider_values)
             self.die_distribution = [_ for _ in slider_values]
             self.convolution = convolution(self)
@@ -378,11 +382,22 @@ class simulation:
     def __init__(self, frame: mainframe):
         print('Beginning the simulation, enjoy!')
         # inheritance
-        self.f = frame
-        self.graph = self.f.window['simulation graph']
-        self.dist = [x / 100 for x in self.f.die_distribution]
-        self.number_of_rolls = int(self.f.values['rolls'])
-        self.number_of_dice = int(self.f.values['dice'])
+        try:
+            self.f = frame
+            self.graph = self.f.window['simulation graph']
+            self.dist = [x / 100 for x in self.f.die_distribution]
+            self.number_of_rolls = int(self.f.values['rolls'])
+            self.number_of_dice = int(self.f.values['dice'])
+            if self.number_of_dice < 1 or self.number_of_rolls < 1:
+                raise Exception
+        except:
+            print("Cancelling... Could not gather the required inputs.")
+            try:
+                if self.number_of_dice < 1 or self.number_of_rolls < 1:
+                    print('this ran from the except block')
+                    raise ValueError("We must roll at least once.\nPlease enter a non-zero value.")
+            except:
+                raise ValueError("Please enter integers into the input fields.")
         # child
         # self.f.window['log'].update(value='')
         self.partition = self.make_partition()

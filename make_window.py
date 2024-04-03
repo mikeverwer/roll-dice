@@ -5,9 +5,9 @@ def do_binds(window, button_images):
     """
     This is magic code that enables the mouseover highlighting to work.
     """
-    for image_data in button_images:
-        window[('hover', image_data)].bind('<Enter>', 'ENTER')
-        window[('hover', image_data)].bind('<Leave>', 'EXIT')
+    for image in button_images:
+        window[('hover', image)].bind('<Enter>', 'ENTER')
+        window[('hover', image)].bind('<Leave>', 'EXIT')
 
 
 def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
@@ -18,7 +18,8 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
     slider_columns = [sg.Push()]
     for i in range(1, 7):
-        image = sg.Button(image_data=images[f'die{i}'], enable_events=True, key=f'lock{i}', p=((0, 10), (0, 0)))
+        b64_image_data = getattr(frame.images, f'die{i}')
+        image = sg.Button(image_data=b64_image_data, enable_events=True, key=f'lock{i}', p=((0, 10), (0, 0)))
         slider = sg.Slider(range=(0, 100), orientation='v', size=(5, 20), enable_events=True,  # was (5, 20)
                            default_value=frame.die_distribution[i - 1], key=f'face{i}', p=((0, 10), (5, 5)))
         column = sg.Column([[image], [slider]], element_justification='right')
@@ -51,8 +52,8 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
         [sg.Frame(title='', relief='raised', layout=[
                 [sg.Text(' Number of dice to roll: ', font='Helvetica 12 bold'), sg.Input(s=4, default_text=frame.dice, justification='right', k='dice'),
                 sg.Column([
-                    [sg.Button(image_data=frame.images['up'], key='up')],
-                    [sg.Button(image_data=frame.images['down'], key='down')]
+                    [sg.Button(image_data=frame.images.up, key='up')],
+                    [sg.Button(image_data=frame.images.down, key='down')]
                 ])]
             ], p=((0, 0), (8, 8))
          )
@@ -117,10 +118,11 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
         []
     ]
     
-    menu_button_image_tags = ['author', 'menubar_clt']
+    hoverable_buttons = ['author', 'menubar_CLT', 'minimize', 'exit']
     menu_def = [
-        [sg.Image(data=images['menubar1']), sg.Image(data=images['menubar_clt'], enable_events=True, key=('hover', 'menubar_clt')), sg.Image(data=images['menubar2']), 
-         sg.Push(), sg.Image(data=images['menubar1-r']), sg.Image(data=images['author'], enable_events=True, key=('hover', 'author'))]
+        [sg.Image(data=images.menubar1), sg.Image(data=frame.images.menubar_CLT, enable_events=True, key=('hover', 'menubar_CLT')), sg.Image(data=images.menubar2), 
+         sg.Push(), sg.Image(data=images.menubar1_r), sg.Image(data=images.author, enable_events=True, key=('hover', 'author')), 
+         sg.Image(data=images.minimize, enable_events=True, key=('hover', 'minimize')), sg.Image(data=images.exit, enable_events=True, key=('hover', 'exit'))]
     ]
 
     plots_layout += sim_inter_layout
@@ -144,8 +146,8 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
 
     window = sg.Window(
-        'CLT Demonstration', layout, grab_anywhere=True, element_padding=0, margins=(0, 0), finalize=True, font='helvetica 10 bold')  # was (60, 1)
-    do_binds(window, menu_button_image_tags)
+        'CLT Demonstration', layout, grab_anywhere=True, element_padding=0, margins=(0, 0), finalize=True, font='helvetica 10 bold', no_titlebar=True, border_depth=0)  # was (60, 1)
+    do_binds(window, hoverable_buttons)
     
     # ----------------------------------------------------------------------------------------------------------------------
     # Hotkeys

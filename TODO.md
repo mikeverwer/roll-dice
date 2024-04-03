@@ -6,6 +6,7 @@
 - trim x-axes
 - rework the window
   - Add roll display graph, maybe even animate the rolls with different dice png's
+- make sim graph very large in the y-dir and scrollable
 
 ## High priority
 
