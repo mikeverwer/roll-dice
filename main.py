@@ -10,7 +10,7 @@ import webbrowser
 import make_window as make
 from classes import mainframe
 from classes import simulation
-from classes import roll
+from classes import bar
 
 matplotlib.use('TkAgg')
 
@@ -122,6 +122,20 @@ def do_binds(window, button_images):
 def error_popup(error, message):
     sg.popup_quick_message(f'\n{error}:\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=5, grab_anywhere=True)
 
+def activate_hit_detect(click, graph: sg.Graph, objects: list[object], prev_selection: tuple[any, object] = (None, None)):
+    if prev_selection[0]:  # delete drawings 
+        graph.delete_figure(selected_roll_id)
+        selected_roll_id = None
+    found = False
+    for Object in objects:
+        if not found:
+            if Object.is_hit(click):
+                found = True
+                Object.display=True
+                return Object
+                selected_roll_id = graph.draw_rectangle(Object.hitbox[0], Object.hitbox[1], 'magenta')
+                print(f'hit roll {roll_obj.roll_number}')
+
 """
 # ----------------------------------------------------------------------------------------------------------------------
     Beginning of GUI Code
@@ -196,7 +210,7 @@ def main():
                 elif button_clicked == 'author':
                     webbrowser.open('https://mikeverwer.github.io/')
                 elif button_clicked == 'minimize':
-                    window.Hide()
+                    pass
 
         elif event == 'SaveSettings':
             filename = sg.popup_get_file('Save Settings', save_as=True, no_window=True)
@@ -268,32 +282,25 @@ def main():
 
         elif event == 'convolution graph':
             print(f"[LOG] pressed {event}: {mf.values[event]}")
-            if selected_bar_id:
-                mf.con_graph.delete_figure(selected_bar_id)
-                selected_bar_id = None
-            click = mf.values[event]
-            found = False
-            for bar in mf.convolution.bins:
-                if not found:
-                    if bar.is_hit(click):
-                        found = True
-                        selected_bar_id = mf.con_graph.draw_rectangle(bar.hitbox[0], bar.hitbox[1], 'magenta')
-                        print(f'hit bar {bar.bin}')
+            try:
+                hit_bin: bar = None
+                mf.convolution.selection_box_id, hit_bin = mf.activate_hit_detect(click=mf.values[event], graph=mf.convolution.graph, 
+                                                                                   objects=mf.convolution.bins, prev_selection=(mf.convolution.selection_box_id, None))
+                if hit_bin:
+                    print(f"Sum: {hit_bin.bin}")
+            except TypeError:
+                mf.convolution.selection_box_id = None
 
         
         elif event == 'simulation graph' and sim:
             print(f"[LOG] pressed {event}: {mf.values[event]}")
-            if selected_roll_id:
-                sim_graph.delete_figure(selected_roll_id)
-                selected_roll_id = None
-            click = mf.values[event]
-            found = False
-            for roll_obj in sim.rolls:
-                if not found:
-                    if roll_obj.is_hit(click):
-                        found = True
-                        selected_roll_id = sim_graph.draw_rectangle(roll_obj.hitbox[0], roll_obj.hitbox[1], 'magenta')
-                        print(f'hit roll {roll_obj.roll_number}')
+            try:
+                sim.selection_box_id, hit_roll = mf.activate_hit_detect(click=mf.values[event], graph=sim_graph, objects=sim.rolls, prev_selection=(sim.selection_box_id, None))
+                if hit_roll:
+                    print(f"Roll: {hit_roll.roll_number}")
+            except TypeError:
+                sim.selection_box_id = None
+
 
         
         ######################################

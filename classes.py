@@ -1,4 +1,5 @@
 import random
+import PySimpleGUI as sg
 import numpy as np
 
 class mainframe:
@@ -21,7 +22,7 @@ class mainframe:
         self.dice = 1
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 64
-        self.sim_margins: list[list[int]] = [[150, 75], [50, 50]]  #(left, right), (bottom, top)
+        self.sim_margins: list[list[int]] = [[100, 75], [50, 50]]  #(left, right), (bottom, top)
         self.sim_graph_size = (1000, 650)
         self.con_margins: list[list[int]] = [[25, 25], [25, 10]]  #(left, right), (bottom, top)
         self.con_graph_size = (450, 325)
@@ -30,7 +31,6 @@ class mainframe:
         self.logging_UI_text = ' '
         self.simulate = False
         self.convolution = convolution(self)
-        self.convoluted_distribution = self.create_convoluted_distribution(self.dice, get_var=True)
         self.convolution_title = f' The Probability Distribution for the Sum of {self.dice} Dice '
         print(f'Complete!\n')
         
@@ -90,30 +90,21 @@ class mainframe:
         else: self.mean, self.deviation = mean, standard_deviation
 
     
-    def create_convoluted_distribution(self, dice=None, get_var=False, draw=False):
-        if dice is None:
-            dice = int(self.values['dice'])
-        if sum(self.die_distribution) != 1:
-            static_dist = [x / 100 for x in self.die_distribution]
-        else:
-            static_dist = self.die_distribution
-        convoluted_distribution = static_dist
-        for _ in range(dice - 1):
-            convoluted_distribution = np.convolve(convoluted_distribution, static_dist)
-        # all possible outcomes
-        outcomes = list(range(dice, 6 * dice))
-        if get_var:
-            return convoluted_distribution
-        else: 
-            self.convoluted_distribution = convoluted_distribution
-        if draw:
-            self.draw_convoluted_distribution(convoluted_distribution)
-
-
-    def draw_convoluted_distribution(self, dist=None):
-        if dist is None:
-            dist = self.convoluted_distribution
-
+    def activate_hit_detect(self,click, graph: sg.Graph, objects: list[object], prev_selection: tuple[int, object] = (None, None)):
+        selection_id = prev_selection[0]
+        if graph == 'sim':
+            graph
+        if selection_id:  # delete drawings 
+            graph.delete_figure(selection_id)
+        found = False
+        for Object in objects:
+            if not found:
+                if Object.is_hit(click):
+                    found = True
+                    Object.display=True
+                    selection_id = graph.draw_rectangle(Object.hitbox[0], Object.hitbox[1], 'magenta')
+                    print(f'Hit Detected!, found {Object}')
+                    return selection_id, Object
 
     def add_preset(self, new_preset: str):
         self.preset_list.append(new_preset)
@@ -253,6 +244,7 @@ class convolution:
         self.scalar = 1
         if self.graph:
             self.make_bars()
+        self.selection_box_id = None
 
     def create_convoluted_distribution(self, dice=None, get_var=False):
         if dice is None:
@@ -326,22 +318,30 @@ class convolution:
         # find grid points
         self.find_sizes()
         for i, x in enumerate(self.conv_dist):
+            probability = x
             height = x * self.scalar
             x_location = i * self.bin_width
             bin_number = i + self.number_of_dice
-            new_bar = bar(graph=self.graph, bin=bin_number, size=(self.bin_width, height), coord=x_location)
+            new_bar = bar(graph=self.graph, bin=bin_number, prob=probability, size=(self.bin_width, height), coord=x_location)
             self.bins.append(new_bar)
+
+    def display(self):
+        pass
 
 
 class bar:
-    def __init__(self, graph, bin, size, coord):
+    def __init__(self, graph, bin, prob, size, coord):
         self.graph = graph
         self.bin = bin
+        self.probability = prob
         self.size = size
         self.x_coord = coord
         self.hitbox = self.make_hitbox()  # (top-left, bottom-right)
         self.display = False
         self.draw_bar(*self.hitbox)
+
+    def __repr__(self) -> str:
+        return f"Sum = {self.bin}\n"
     
     def make_hitbox(self):
         top_left = (self.x_coord, self.size[1])
@@ -398,8 +398,9 @@ class simulation:
                     raise ValueError("We must roll at least once.\nPlease enter a non-zero value.")
             except:
                 raise ValueError("Please enter integers into the input fields.")
-        # child
+        # Self
         # self.f.window['log'].update(value='')
+        self.selection_box_id = None
         self.partition = self.make_partition()
         self.possible_outcomes = list(range(self.number_of_dice - 1, (6 * self.number_of_dice) + 1))
         self.outcome_counter: dict[int: int] = {}
@@ -499,6 +500,9 @@ class roll:
         self.id: int 
         self.draw_roll(*self.hitbox)
         self.display = self.is_hit(click=None)
+        
+    def __repr__(self) -> str:
+        return f""
     
 
     def make_hitbox(self):
