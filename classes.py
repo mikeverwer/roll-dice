@@ -3,7 +3,7 @@ import numpy as np
 
 class mainframe:
     def __init__(self, images=None, window=None, values={}):
-        print('[LOG] initializing frame... ', end='')
+        print('[LOG] Initializing frame... ', end='')
         self.images = images
         self.window = window
         self.values = values
@@ -17,13 +17,14 @@ class mainframe:
                'Hill': [2, 12, 40, 38, 7, 1]
         }
         self.die_distribution = self.random_distribution(get_var=True)
+        print(f"Starting die distribution: {self.die_distribution}", end='... ')
         self.dice = 1
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 64
         self.sim_margins: list[list[int]] = [[150, 75], [50, 50]]  #(left, right), (bottom, top)
         self.sim_graph_size = (1000, 650)
         self.con_margins: list[list[int]] = [[25, 25], [25, 10]]  #(left, right), (bottom, top)
-        self.con_graph_size = (450, 300)
+        self.con_graph_size = (450, 325)
         self.con_graph = None
         self.extra_space = 0
         self.logging_UI_text = ' '
@@ -31,7 +32,7 @@ class mainframe:
         self.convolution = convolution(self)
         self.convoluted_distribution = self.create_convoluted_distribution(self.dice, get_var=True)
         self.convolution_title = f' The Probability Distribution for the Sum of {self.dice} Dice '
-        print(f'Complete!\nStarting die distribution: {self.die_distribution}')
+        print(f'Complete!\n')
         
 
     def random_distribution(self, get_var=False):
@@ -229,7 +230,8 @@ class mainframe:
 
 class convolution:
     def __init__(self, frame: mainframe):
-        print('Making Convolution')
+        if frame.con_graph is None:
+            print('Making Convolution', end='... ')
         self.f = frame
         self.bins: list[bar] = []
         self.die_dist = frame.die_distribution

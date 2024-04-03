@@ -1,50 +1,60 @@
 from types import ModuleType
 from classes import mainframe
 
-def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
+def do_binds(window, button_images):
+    """
+    This is magic code that enables the mouseover highlighting to work.
+    """
+    for image_data in button_images:
+        window[('hover', image_data)].bind('<Enter>', 'ENTER')
+        window[('hover', image_data)].bind('<Leave>', 'EXIT')
+
+
+def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     sg.theme(theme)
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Layout
     # ----------------------------------------------------------------------------------------------------------------------
-    slider_columns = []
+    slider_columns = [sg.Push()]
     for i in range(1, 7):
-        image = sg.Button(image_data=images[f'die{i}'], enable_events=True, key=f'lock{i}')
+        image = sg.Button(image_data=images[f'die{i}'], enable_events=True, key=f'lock{i}', p=((0, 10), (0, 0)))
         slider = sg.Slider(range=(0, 100), orientation='v', size=(5, 20), enable_events=True,  # was (5, 20)
-                           default_value=frame.die_distribution[i - 1], key=f'face{i}')
+                           default_value=frame.die_distribution[i - 1], key=f'face{i}', p=((0, 10), (5, 5)))
         column = sg.Column([[image], [slider]], element_justification='right')
         slider_columns.append(column)
+    slider_columns.append(sg.T('', p=((0, 10), (0, 0))))
+    slider_columns.append(sg.Push())
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Main Grid
     # ----------------------------------------------------------------------------------------------------------------------
     grid_layout = [
-        [sg.Text('The Central Limit Theorem      ', font=("Helvetica", 25))],
+        [sg.Text('The Central Limit Theorem', font="Helvetica 26 bold")],
         [sg.Frame('Dice Distribution  |  Click on a die face to lock its value', layout=[
-                [sg.Text('Use the sliders to set a probability distribution for the dice. Then input the\n'
-                 'number of dice to be thrown in each roll, and the number of rolls to perform.', font='helvetica 10')],
+                [sg.Push(), sg.Text('Use the sliders to set a probability distribution for the dice.', font='helvetica 10', p=((0, 0), (2, 2))), sg.Push()],
                 [sg.Push(),
                 sg.Frame('', layout=[
                     [sg.Text(f'Mean: {frame.mean:.2f}', font='helvetica 10 bold', background_color='light cyan', k='mean'),
                     sg.Text(f'Standard Deviation: {frame.deviation:.2f}', k='deviation', font='helvetica 10 bold', background_color='light cyan')]
-                    ], relief='raised', background_color='light cyan'), sg.Push()
+                    ], relief='raised', background_color='light cyan', p=((0, 0), (0, 4))), sg.Push()
                 ],
                 slider_columns, 
-                [sg.Text('_' * 57)],
+                [sg.Text('_' * 59, p=((0, 0), (0, 16)))],
                 [sg.Push(), sg.Text('Preset Distributions'), sg.Combo(frame.preset_list, default_value=None, size=(10, 10),
                                                             enable_events=True, readonly=False, k='preset'),
-                sg.Button("Add", k='add preset', p=((0, 50), (0, 0))),
+                sg.Button(" Add ", k='add preset', p=((16, 50), (0, 0))),
                 sg.Button('Randomize', button_color='cyan'), sg.Push()],
                 [sg.Text('', font='Courier 1')],
-            ], font='Helvetica 12 bold', k='die inputs frame')
+            ], font='Helvetica 12 bold', k='die inputs frame', p=((0, 0), (0, 0)))
         ],
         [sg.Frame(title='', relief='raised', layout=[
-                [sg.Text('Number of dice to roll: ', font='Helvetica 12 bold'), sg.Input(s=4, default_text=frame.dice, justification='right', k='dice'),
+                [sg.Text(' Number of dice to roll: ', font='Helvetica 12 bold'), sg.Input(s=4, default_text=frame.dice, justification='right', k='dice'),
                 sg.Column([
                     [sg.Button(image_data=frame.images['up'], key='up')],
                     [sg.Button(image_data=frame.images['down'], key='down')]
-                ], element_justification="left")]
-            ]
+                ])]
+            ], p=((0, 0), (8, 8))
          )
         ]
         
@@ -68,11 +78,13 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     # Simulation Interface
     # ----------------------------------------------------------------------------------------------------------------------
     sim_inter_layout = [[sg.Column(layout=[
-                [sg.Text('Number of rolls: '), sg.Input(s=9, default_text=100, k='rolls')],
-                [sg.Button('Pause', font='Helvetica 12', size=(8, 2), border_width=4),
-                sg.Button('Roll the Bones!', k='go', border_width=2, size=(8, 2), enable_events=True,
-                        bind_return_key=True, font='Helvetica 12', button_color='white on green'), sg.Text(' ' * 0)],
-            ],
+                [sg.Text('Number of rolls: ', p=((4, 0), (0, 4))), sg.Input(s=9, default_text=100, k='rolls', p=((0, 0), (0, 4)))],
+                [sg.Push(), 
+                 sg.Button('Pause', button_color='white on darkgrey', font='Helvetica 12 bold', size=(8, 1), border_width=2),
+                 sg.Button('Roll!', k='go', border_width=2, size=(8, 1), bind_return_key=True, 
+                           font='Helvetica 12 bold', button_color='white on green'),
+                 sg.Push()],
+            ], p=((8, 8), (8, 8))
         )
     ]]
 
@@ -88,20 +100,27 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     sim_x = frame.sim_graph_size[0]
     sim_y = frame.sim_graph_size[1]
 
-    convolution_graph_layout = [[sg.Push(), sg.Graph((con_x, con_y), (-con_dx, -con_dy), (con_x - con_dx, con_y - con_dy), background_color='white', key = 'convolution graph',
-                  expand_y=True, enable_events=True), sg.Push()]]
+    convolution_graph_layout = [
+        [sg.Push(), sg.Graph((con_x, con_y), (-con_dx, -con_dy), (con_x - con_dx, con_y - con_dy), background_color='white', key = 'convolution graph',
+                expand_y=True, enable_events=True), sg.Push()]
+        ]
 
     plots_layout = [
         [sg.Graph((sim_x, sim_y), (-sim_dx, -sim_dy), (sim_x - sim_dx, sim_y - sim_dy), background_color='white', key = 'simulation graph',
-                  expand_y=True, enable_events=True)
-        ]
+                  expand_y=True, enable_events=True)]
     ]
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Finalize
     # ----------------------------------------------------------------------------------------------------------------------    
+    layout =[
+        []
+    ]
+    
+    menu_button_image_tags = ['author', 'menubar_clt']
     menu_def = [
-        ['&About', ['About', 'The CLT']]
+        [sg.Image(data=images['menubar1']), sg.Image(data=images['menubar_clt'], enable_events=True, key=('hover', 'menubar_clt')), sg.Image(data=images['menubar2']), 
+         sg.Push(), sg.Image(data=images['menubar1-r']), sg.Image(data=images['author'], enable_events=True, key=('hover', 'author'))]
     ]
 
     plots_layout += sim_inter_layout
@@ -109,23 +128,24 @@ def mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     grid_layout += [[sg.TabGroup([[sg.Tab(frame.convolution_title, layout=convolution_graph_layout, k='dist tab'),
                                    sg.Tab('    Log    ', logging_layout, k='log tab')
                                    ]],
-                                font='Helvetica 12 bold', focus_color='white'),
+                                font='Helvetica 12 bold', focus_color='white', border_width=0),
     ]]
 
-    layout = [
-        [sg.Menu(menu_def, key='menu'), sg.Text('')],
-        [sg.Column(grid_layout, element_justification='center'), sg.Column(plots_layout)],
+    layout += menu_def
+
+    layout += [
+        [sg.Column(grid_layout, element_justification='center', vertical_alignment='top'), sg.Column(plots_layout)],
     ]
 
-    layout += [[sg.Button('Exit', font='Helvetica 14', button_color='white on red'),
-                sg.Text('Created by: Mike Verwer, M.Sc. Mathematics; Prof. Mathematics, Mohawk College')]]
+    
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Initialize Window
     # ----------------------------------------------------------------------------------------------------------------------
 
     window = sg.Window(
-        'CLT Demonstration', layout, default_element_size=(55, 1), grab_anywhere=True, finalize=True, font='helvetica 10 bold')  # was (60, 1)
+        'CLT Demonstration', layout, grab_anywhere=True, element_padding=0, margins=(0, 0), finalize=True, font='helvetica 10 bold')  # was (60, 1)
+    do_binds(window, menu_button_image_tags)
     
     # ----------------------------------------------------------------------------------------------------------------------
     # Hotkeys
