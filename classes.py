@@ -106,6 +106,7 @@ class mainframe:
                     print(f'Hit Detected!, found {Object}')
                     return selection_id, Object
 
+
     def add_preset(self, new_preset: str):
         self.preset_list.append(new_preset)
         self.presets[new_preset] = self.die_distribution

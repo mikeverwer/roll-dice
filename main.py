@@ -122,19 +122,6 @@ def do_binds(window, button_images):
 def error_popup(error, message):
     sg.popup_quick_message(f'\n{error}:\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=5, grab_anywhere=True)
 
-def activate_hit_detect(click, graph: sg.Graph, objects: list[object], prev_selection: tuple[any, object] = (None, None)):
-    if prev_selection[0]:  # delete drawings 
-        graph.delete_figure(selected_roll_id)
-        selected_roll_id = None
-    found = False
-    for Object in objects:
-        if not found:
-            if Object.is_hit(click):
-                found = True
-                Object.display=True
-                return Object
-                selected_roll_id = graph.draw_rectangle(Object.hitbox[0], Object.hitbox[1], 'magenta')
-                print(f'hit roll {roll_obj.roll_number}')
 
 """
 # ----------------------------------------------------------------------------------------------------------------------

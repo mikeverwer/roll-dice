@@ -146,7 +146,8 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
 
     window = sg.Window(
-        'CLT Demonstration', layout, grab_anywhere=True, element_padding=0, margins=(0, 0), finalize=True, font='helvetica 10 bold', no_titlebar=True, border_depth=0)  # was (60, 1)
+        'CLT Demonstration', layout, grab_anywhere=True, element_padding=0, margins=(0, 0), finalize=True, font='helvetica 10 bold', 
+        no_titlebar=True, border_depth=0, icon='assets/b64.ico')  # was (60, 1)
     do_binds(window, hoverable_buttons)
     
     # ----------------------------------------------------------------------------------------------------------------------
