@@ -90,21 +90,22 @@ class mainframe:
         else: self.mean, self.deviation = mean, standard_deviation
 
     
-    def activate_hit_detect(self,click, graph: sg.Graph, objects: list[object], prev_selection: tuple[int, object] = (None, None)):
+    def activate_hit_detect(self,click, graph: sg.Graph, event, objects: list[object], prev_selection: tuple[int, object] = (None, None)):
         selection_id = prev_selection[0]
-        if graph == 'sim':
-            graph
         if selection_id:  # delete drawings 
             graph.delete_figure(selection_id)
         found = False
+        print(f"Clicked {event}: {click}, \nLooking... ", end="")
         for Object in objects:
             if not found:
                 if Object.is_hit(click):
                     found = True
                     Object.display=True
                     selection_id = graph.draw_rectangle(Object.hitbox[0], Object.hitbox[1], 'magenta')
-                    print(f'Hit Detected!, found {Object}')
+                    print(f'found {Object}')
                     return selection_id, Object
+        if not found:
+            print('Found nothing.')
 
 
     def add_preset(self, new_preset: str):

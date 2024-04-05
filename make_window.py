@@ -1,5 +1,16 @@
 from types import ModuleType
-from classes import mainframe
+# from classes import mainframe
+import classes as cl
+
+def update_frame(window, frame):
+    f = frame
+    f.window = window
+    f.con_graph = f.window['convolution graph']
+    f.convolution.graph = f.con_graph
+    f.convolution.make_bars()
+    f.convolution.graph.grab_anywhere_exclude()
+    f.window['simulation graph'].grab_anywhere_exclude()
+
 
 def do_binds(window, button_images):
     """
@@ -10,8 +21,9 @@ def do_binds(window, button_images):
         window[('hover', image)].bind('<Leave>', 'EXIT')
 
 
-def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
+def Mainframe(sg: ModuleType, images: dict, theme, frame: cl.mainframe):
     sg.theme(theme)
+    screen_width, screen_height = sg.Window.get_screen_size()
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Layout
@@ -30,6 +42,24 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
     # Main Grid
     # ----------------------------------------------------------------------------------------------------------------------
+    die_dist_layout = [
+                [sg.Push(), sg.Text('Use the sliders to set a probability distribution for the dice.', font='helvetica 10', p=((0, 0), (2, 2))), sg.Push()],
+                [sg.Push(),
+                sg.Frame('', layout=[
+                    [sg.Text(f'Mean: {frame.mean:.2f}', font='helvetica 10 bold', background_color='light cyan', k='mean'),
+                     sg.Text(f'Standard Deviation: {frame.deviation:.2f}', k='deviation', font='helvetica 10 bold', background_color='light cyan')]
+                    ], relief='raised', background_color='light cyan', p=((0, 0), (0, 4))), sg.Push()
+                ],
+                slider_columns, 
+                [sg.Text('-' * 59, p=((0, 0), (0, 16)))],
+                [sg.Push(), sg.Text('Preset Distributions'), sg.Combo(frame.preset_list, default_value=None, size=(10, 10),
+                                                            enable_events=True, readonly=False, k='preset'),
+                sg.Button(" Add ", k='add preset', p=((16, 50), (0, 0))),
+                sg.Button('Randomize', button_color='cyan'), sg.Push()],
+                [sg.Text('', font='Courier 1')],
+            ]
+
+
     grid_layout = [
         [sg.Text('The Central Limit Theorem', font="Helvetica 26 bold")],
         [sg.Frame('Dice Distribution  |  Click on a die face to lock its value', layout=[
@@ -81,7 +111,7 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
     sim_inter_layout = [[sg.Column(layout=[
                 [sg.Text('Number of rolls: ', p=((4, 0), (0, 4))), sg.Input(s=9, default_text=100, k='rolls', p=((0, 0), (0, 4)))],
                 [sg.Push(), 
-                 sg.Button('Pause', button_color='white on darkgrey', font='Helvetica 12 bold', size=(8, 1), border_width=2),
+                 sg.Button('Pause', button_color='#1b1b1b on darkgrey', font='Helvetica 12 bold', size=(8, 1), border_width=2),
                  sg.Button('Roll!', k='go', border_width=2, size=(8, 1), bind_return_key=True, 
                            font='Helvetica 12 bold', button_color='white on green'),
                  sg.Push()],
@@ -118,11 +148,10 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
         []
     ]
     
-    hoverable_buttons = ['author', 'menubar_CLT', 'minimize', 'exit']
+    hoverable_buttons = ['author', 'menubar_CLT']
     menu_def = [
         [sg.Image(data=images.menubar1), sg.Image(data=frame.images.menubar_CLT, enable_events=True, key=('hover', 'menubar_CLT')), sg.Image(data=images.menubar2), 
-         sg.Push(), sg.Image(data=images.menubar1_r), sg.Image(data=images.author, enable_events=True, key=('hover', 'author')), 
-         sg.Image(data=images.minimize, enable_events=True, key=('hover', 'minimize')), sg.Image(data=images.exit, enable_events=True, key=('hover', 'exit'))]
+         sg.Push(), sg.Image(data=images.menubar1_r), sg.Image(data=images.author, enable_events=True, key=('hover', 'author'))]
     ]
 
     plots_layout += sim_inter_layout
@@ -139,16 +168,15 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: mainframe):
         [sg.Column(grid_layout, element_justification='center', vertical_alignment='top'), sg.Column(plots_layout)],
     ]
 
-    
-
     # ----------------------------------------------------------------------------------------------------------------------
     # Initialize Window
     # ----------------------------------------------------------------------------------------------------------------------
 
     window = sg.Window(
         'CLT Demonstration', layout, grab_anywhere=True, element_padding=0, margins=(0, 0), finalize=True, font='helvetica 10 bold', 
-        no_titlebar=True, border_depth=0, icon='assets/b64.ico')  # was (60, 1)
+        border_depth=0, icon=frame.images.lock6)  # was (60, 1)
     do_binds(window, hoverable_buttons)
+    update_frame(window, frame)
     
     # ----------------------------------------------------------------------------------------------------------------------
     # Hotkeys

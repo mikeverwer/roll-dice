@@ -98,7 +98,6 @@ def create_convoluted_distribution_plot(distribution, number_of_dice, mean, devi
 # ----------------------------------------------------------------------------------------------------------------------
 # Matlab helper code for GUI
 # ----------------------------------------------------------------------------------------------------------------------
-
 def draw_figure(canvas, figure):
     figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
     figure_canvas_agg.draw()
@@ -123,11 +122,13 @@ def error_popup(error, message):
     sg.popup_quick_message(f'\n{error}:\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=5, grab_anywhere=True)
 
 
-"""
-# ----------------------------------------------------------------------------------------------------------------------
-    Beginning of GUI Code
-# ----------------------------------------------------------------------------------------------------------------------
-"""
+###########################################################################################################################
+###########################################################################################################################
+# -------------------------------------------------------------------------------------------------------------------------
+#   Beginning of GUI Code
+# -------------------------------------------------------------------------------------------------------------------------
+###########################################################################################################################
+###########################################################################################################################
 def main():
     # ---------------------------------------------------------------------------------------------------------------------
     # Initialize Window
@@ -136,13 +137,13 @@ def main():
     sg.theme('Default1')
     mf = mainframe(images)  # MainFrame object, see classes.py
     window = make.Mainframe(sg, images, theme='Default1', frame=mf)
-    mf.window = window
-    mf.con_graph = mf.window['convolution graph']
-    mf.convolution.graph = mf.con_graph
-    mf.convolution.make_bars()
-    sim = None
-    mf.convolution.graph.grab_anywhere_exclude()
-    mf.window['simulation graph'].grab_anywhere_exclude()
+    # mf.window = window
+    # mf.con_graph = mf.window['convolution graph']
+    # mf.convolution.graph = mf.con_graph
+    # mf.convolution.make_bars()
+    # sim = None
+    # mf.convolution.graph.grab_anywhere_exclude()
+    # mf.window['simulation graph'].grab_anywhere_exclude()
 
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
@@ -150,6 +151,7 @@ def main():
     selected_bar_id = None
     logging = False
     full_logging = False
+    sim = None
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Event Loop
@@ -266,12 +268,14 @@ def main():
         
         elif event == 'Pause' and sim:
             mf.simulate = not mf.simulate
+            new_text = 'Pause' if mf.simulate else "Play"
+            window['Pause'].update(text=new_text)
 
         elif event == 'convolution graph':
             print(f"[LOG] pressed {event}: {mf.values[event]}")
             try:
                 hit_bin: bar = None
-                mf.convolution.selection_box_id, hit_bin = mf.activate_hit_detect(click=mf.values[event], graph=mf.convolution.graph, 
+                mf.convolution.selection_box_id, hit_bin = mf.activate_hit_detect(click=mf.values[event], graph=mf.convolution.graph, event=event,
                                                                                    objects=mf.convolution.bins, prev_selection=(mf.convolution.selection_box_id, None))
                 if hit_bin:
                     print(f"Sum: {hit_bin.bin}")
@@ -282,7 +286,7 @@ def main():
         elif event == 'simulation graph' and sim:
             print(f"[LOG] pressed {event}: {mf.values[event]}")
             try:
-                sim.selection_box_id, hit_roll = mf.activate_hit_detect(click=mf.values[event], graph=sim_graph, objects=sim.rolls, prev_selection=(sim.selection_box_id, None))
+                sim.selection_box_id, hit_roll = mf.activate_hit_detect(click=mf.values[event], graph=sim_graph, event=event, objects=sim.rolls, prev_selection=(sim.selection_box_id, None))
                 if hit_roll:
                     print(f"Roll: {hit_roll.roll_number}")
             except TypeError:
