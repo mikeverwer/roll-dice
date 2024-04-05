@@ -234,14 +234,16 @@ class convolution:
         self.die_dist = frame.die_distribution
         self.graph = frame.con_graph
         if sum(self.die_dist) != 1:
-            self.die_dist = [x / 100 for x in self.die_dist]
+            self.die_dist = [x / sum(self.die_dist) for x in self.die_dist]
         else:
-            self.die_dist = self.die_distribution
+            self.die_dist = self.die_dist
         self.number_of_dice = self.f.dice
         # all possible outcomes
-        self.possible_outcomes = list(range(self.number_of_dice - 1, (6 * self.number_of_dice) + 1))
+        self.possible_outcomes = list(range(self.number_of_dice, (6 * self.number_of_dice) + 1))
         self.conv_dist = self.create_convoluted_distribution(get_var=True)
-        self.trim_outcomes()
+        self.mean, self.deviation = self.f.mean_and_deviation(self.conv_dist, update=False, dice=self.number_of_dice)
+        self.leftmost_bin: int = None
+        self.rightmost_bin: int = None
         self.bin_width = 1
         self.scalar = 1
         if self.graph:
@@ -263,6 +265,9 @@ class convolution:
 
     def trim_outcomes(self):
         feasible_outcomes = self.possible_outcomes
+        distribution = self.conv_dist
+        number_of_bins = len(distribution)
+        
         # feasible outcomes, within 3.5 st. dev.'s from the mean
         # outcomes = list(range(int(mean - (3.5 * deviation)), int(mean + (3.5 * deviation))))  
 
@@ -270,46 +275,63 @@ class convolution:
         #        Need to handle boundary checking.
         # Trim outcomes and distribution accordingly
 
-        # left_border_index = int(mean - (5.5 * deviation))
-        # print(f'{left_border_index = }')
-        # left_border_index = 0 if left_border_index < 0 else left_border_index
-        # right_border_index = int(mean + (5.5 * deviation))
-        # print(f'{right_border_index = }')
-        # right_border_index = len(outcomes) - 1 if right_border_index > len(outcomes) - 1 else right_border_index
-        # tol = 1e-4
-        # print(f"{left_border_index = }, {right_border_index = }")
-        # print(f"  y at {left_border_index} = {distribution[left_border_index]},\n  y at {right_border_index} = {distribution[right_border_index]}")
-        # print('original outcomes:')
-        # print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }")
-        # if distribution[left_border_index] < tol and distribution[right_border_index] > tol and left_border_index > 0:
+        left_border_index = int(self.mean - (5.5 * self.deviation))
+        left_border_index = 0 if left_border_index < 0 else left_border_index
+        right_border_index = int(self.mean + (5.5 * self.deviation))
+        right_border_index = len(feasible_outcomes) - 1 if right_border_index >= len(feasible_outcomes) else right_border_index
+        tol = 1
+        left_bin_height = distribution[left_border_index] * self.scalar
+        right_bin_height = distribution[right_border_index]
+        
+        for i, x in enumerate(distribution):
+            found = False
+            if not found:
+                if x * self.scalar > 1:
+                    left_border_index = i
+                    found = True
+        
+        for i, x in enumerate(reversed(distribution)):
+            found = False
+            if not found:
+                if x * self.scalar > 1:
+                    right_border_index = len(distribution) - i
+                    found = True
+                    
+        print(f"{left_border_index = }, {right_border_index = }")
+        
+        # if left_bin_height < tol and distribution[right_border_index] > tol:
         #     distribution = distribution[left_border_index:]
-        #     outcomes = outcomes[left_border_index:]
-        #     print('trimming LEFT border only')
-        #     print('new outcomes:')
-        #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
-        # elif distribution[left_border_index] > tol and distribution[right_border_index] < tol and right_border_index < len(outcomes) - 1:
+        #     feasible_outcomes = feasible_outcomes[left_border_index:]
+        # elif distribution[left_border_index] > tol and distribution[right_border_index] < tol and right_border_index < len(feasible_outcomes) - 1:
         #     distribution = distribution[:right_border_index]
-        #     outcomes = outcomes[:right_border_index]
+        #     feasible_outcomes = feasible_outcomes[:right_border_index]
         #     print('trimming RIGHT border only')
         #     print('new outcomes:')
-        #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+        #     print(f"{len(feasible_outcomes) = }, {feasible_outcomes[0] = }, {feasible_outcomes[-1] = }\n")
         # elif distribution[left_border_index] < tol and distribution[right_border_index] < tol:
         #     distribution = distribution[left_border_index:right_border_index]
-        #     outcomes = outcomes[left_border_index:right_border_index]
+        #     feasible_outcomes = feasible_outcomes[left_border_index:right_border_index]
         #     print('trimming BOTH borders')
         #     print('new outcomes:')
-        #     print(f"{len(outcomes) = }, {outcomes[0] = }, {outcomes[-1] = }\n")
+        #     print(f"{len(feasible_outcomes) = }, {feasible_outcomes[0] = }, {feasible_outcomes[-1] = }\n")
         # else:
         #     print('No trim needed')
-        return feasible_outcomes
+        
+        feasible_outcomes = feasible_outcomes[left_border_index : right_border_index]
+        self.possible_outcomes = feasible_outcomes
+        distribution = distribution[left_border_index : right_border_index]
+        self.conv_dist = distribution
+        return
  
     
     def find_sizes(self):
-        bins = len(self.conv_dist)
-        self.bin_width = self.top_right[0] // bins
         highest_probability = max(self.conv_dist)
         highest_point = self.top_right[1] * 0.75
         self.scalar = highest_point / highest_probability
+        print('about to trim')
+        # self.trim_outcomes()
+        bins = len(self.conv_dist)
+        self.bin_width = self.top_right[0] // bins
     
     def make_bars(self):
         self.graph.erase()
@@ -318,6 +340,7 @@ class convolution:
         self.top_right = (self.f.con_graph_size[0] - sum(self.f.con_margins[0]), self.f.con_graph_size[1] - sum(self.f.con_margins[1]))
         self.graph.draw_rectangle((0, 0), self.top_right)
         # find grid points
+        print('this runs')
         self.find_sizes()
         for i, x in enumerate(self.conv_dist):
             probability = x
