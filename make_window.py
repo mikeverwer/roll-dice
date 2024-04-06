@@ -3,14 +3,23 @@ import PySimpleGUI
 # from classes import mainframe
 import classes as cl
 
-def update_frame(window, frame):
-    f = frame
+def update_frame(window: PySimpleGUI.Window, frame: cl.mainframe):
+    f: cl.mainframe = frame
     f.window = window
+    # initialize convolution graph
     f.con_graph = f.window['convolution graph']
     f.convolution.graph = f.con_graph
     f.convolution.make_bars()
-    f.convolution.graph.grab_anywhere_exclude()
-    f.window['simulation graph'].grab_anywhere_exclude()
+
+    # drag-anywhere exclusions
+    drag_exclusions = ['convolution graph', 'simulation graph', 'Pause', 'go', 'add preset', 'Randomize', 'up', 'down']
+    drag_exclusions += [f'face{i}' for i in range(1, 7)] + [f'lock{j}' for j in range(1, 7)]
+    for item in drag_exclusions:
+        f.window[f'{item}'].grab_anywhere_exclude()
+    # f.convolution.graph.grab_anywhere_exclude()
+    # f.window['simulation graph'].grab_anywhere_exclude()
+    # f.window['Pause'].grab_anywhere_exclude()
+    # f.window['go'].grab_anywhere_exclude()
 
 
 def do_binds(window, button_images):

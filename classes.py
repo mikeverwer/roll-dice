@@ -1,4 +1,3 @@
-import matplotlib.ticker as ticker
 import random
 import PySimpleGUI as sg
 import numpy as np
@@ -150,7 +149,7 @@ class mainframe:
             active_face = int(event[-1])
         self.values[event] = set_to_value
 
-        # If the face is not locked, accept and adjust other faces
+        # If the face is not locked, accept the input value and adjust other faces
         if not self.locks[active_face - 1]:  
             active_slider_key = event
             active_slider_value = self.values[event]
@@ -324,6 +323,16 @@ class convolution:
         distribution = distribution[left_border_index : right_border_index]
         self.conv_dist = distribution
         return
+    
+    def drawing_area(self):
+        self.graph.draw_rectangle((0, 0), self.top_right)
+        # Draw x-axis tick marks and labels
+        x_tick_diff = len(self.possible_outcomes) // 5  # ensures there are always 6 tick labels
+        for i, bin in enumerate(self.possible_outcomes):
+            box_center = self.bin_width * (i + 0.5)
+            self.graph.draw_line((box_center, -1), (box_center, -10))   # box_center = self.box_width * (i + 0.5)
+            if i % x_tick_diff == 0:
+                self.graph.draw_text(f'{bin}', location=(box_center, -15))
  
     
     def find_sizes(self):
@@ -340,10 +349,9 @@ class convolution:
         self.bins: list[bar] = []
         self.graph = self.f.con_graph
         self.top_right = (self.f.con_graph_size[0] - sum(self.f.con_margins[0]), self.f.con_graph_size[1] - sum(self.f.con_margins[1]))
-        self.graph.draw_rectangle((0, 0), self.top_right)
         # find grid points
-        print('this runs')
         self.find_sizes()
+        self.drawing_area()
         for i, x in enumerate(self.conv_dist):
             probability = x
             height = x * self.scalar
@@ -416,6 +424,7 @@ class simulation:
             self.number_of_rolls: int = int(self.f.values['rolls'])
             self.number_of_dice: int = int(self.f.values['dice'])
             if self.number_of_dice < 1 or self.number_of_rolls < 1:
+                print('this ran from the try block')
                 raise Exception
         except:
             print("Cancelling... Could not gather the required inputs.")
@@ -460,23 +469,12 @@ class simulation:
             y_tick_height += delta_y
             y_tick += y_tick_diff
         # Draw x-axis tick marks and labels
-        box_center = self.box_width / 2
-        x_tick_diff = np.gcd(6, (self.possible_outcomes[-1] - self.possible_outcomes[0]))
-        x_tick_diff = len(self.possible_outcomes) // 6
-        print(f"{x_tick_diff = }")
-        # locator = ticker.AutoLocator()
-        # locator.axis.set_view_interval((self.possible_outcomes[0], self.possible_outcomes[-1]))
-        # xtick_positions = locator()
-        # xtick_intervals = [xtick_positions[i + 1] - xtick_positions[i] for i in range(len(xtick_positions)-1)]
-   
-        # x_tick_diff = (self.possible_outcomes[-1] - self.possible_outcomes[0] + 1) // 6
+        x_tick_diff = len(self.possible_outcomes) // 5  # ensures there are always 6 tick labels
         for i, bin in enumerate(self.possible_outcomes):
-            self.graph.draw_line(((i * self.box_width) + box_center, -1), ((i * self.box_width) + box_center, -10))
+            box_center = self.box_width * (i + 0.5)
+            self.graph.draw_line((box_center, -1), (box_center, -10))   # box_center = self.box_width * (i + 0.5)
             if i % x_tick_diff == 0:
-            # if i in xtick_intervals:
-                self.graph.draw_text(f'{bin}', location=((i * self.box_width) + box_center, -15))
-
-
+                self.graph.draw_text(f'{bin}', location=(box_center, -15))
 
     
     def find_box_size(self):

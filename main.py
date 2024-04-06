@@ -211,7 +211,6 @@ def main():
             # load(form)
 
         elif event.startswith('face'):
-            active_face = int(event[-1])
             mf.activate_slider(event=event)
 
         elif event.startswith('lock'):
@@ -225,19 +224,6 @@ def main():
 
         elif event == 'add preset' and mf.values['preset'] != '':
             mf.add_preset(mf.values['preset'])
-
-        elif event.startswith('input'):
-            active_face = int(event[-1])
-            previous_values = [mf.values[f'face{i}'] for i in range(1, 7)]
-            input_value = mf.values[event][:-1]
-            try:
-                active_face_value = float(input_value)
-                mf.activate_slider(f'face{active_face}', mf.values, active_face_value)
-            except ValueError:
-                if mf.values[event] != '':
-                    sg.popup('Enter a number', title='Error')
-                elif mf.values[event] == '':
-                    mf.set_sliders_to(previous_values)
 
         elif event == 'Randomize':
             if False in mf.locks:  # At least 1 slider is unlocked
