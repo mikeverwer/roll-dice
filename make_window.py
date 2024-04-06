@@ -90,7 +90,7 @@ def Mainframe(sg: PySimpleGUI, images: dict, theme, frame: cl.mainframe):
             ], font='Helvetica 12 bold', k='die inputs frame', p=((0, 0), (0, 0)))
         ],
         [sg.Frame(title='', relief='raised', layout=[
-                [sg.Text(' Number of dice to roll: ', font='Helvetica 12 bold'), sg.Input(s=4, default_text=frame.dice, justification='right', k='dice'),
+                [sg.Text(' Number of dice to roll: ', font='Helvetica 12 bold'), sg.Input(s=4, k='dice', default_text=frame.dice, readonly=False, justification='right', enable_events=True),
                 sg.Column([
                     [sg.Button(image_data=frame.images.up, key='up')],
                     [sg.Button(image_data=frame.images.down, key='down')]
@@ -118,16 +118,23 @@ def Mainframe(sg: PySimpleGUI, images: dict, theme, frame: cl.mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
     # Simulation Interface
     # ----------------------------------------------------------------------------------------------------------------------
-    sim_inter_layout = [[sg.Column(layout=[
-                [sg.Text('Number of rolls: ', p=((4, 0), (0, 4))), sg.Input(s=9, default_text=100, k='rolls', p=((0, 0), (0, 4)))],
-                [sg.Push(), 
-                 sg.Button('Pause', button_color='#1b1b1b on darkgrey', font='Helvetica 12 bold', size=(8, 1), border_width=2),
-                 sg.Button('Roll!', k='go', border_width=2, size=(8, 1), bind_return_key=True, 
-                           font='Helvetica 12 bold', button_color='white on green'),
-                 sg.Push()],
-            ], p=((8, 8), (8, 8))
-        )
-    ]]
+    sim_input_column_layout = [
+        [sg.Text('Number of rolls: ', p=((4, 0), (0, 4))), sg.Input(s=9, default_text=100, k='rolls', p=((0, 0), (0, 4)))],
+        [sg.Push(), 
+        sg.Button('Pause', button_color='#1b1b1b on darkgrey', font='Helvetica 12 bold', size=(8, 1), border_width=2),
+        sg.Button('Roll!', k='go', border_width=2, size=(8, 1), bind_return_key=True, 
+                font='Helvetica 12 bold', button_color='white on green'),
+        sg.Push()],
+    ]
+    
+    sim_display_column_layout = [
+        [sg.Image(data=None, k='dice gif'), sg.Text('test')]
+    ]
+
+    sim_inter_layout = [
+        [sg.Column(layout=sim_input_column_layout, p=((8, 8), (8, 8))),
+        ]
+    ]
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Graphs 

@@ -7,10 +7,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 import webbrowser
 # required files
+import classes as cl
 import make_window as make
-from classes import mainframe
-from classes import simulation
-from classes import bar
 
 matplotlib.use('TkAgg')
 
@@ -135,7 +133,7 @@ def main():
     # ---------------------------------------------------------------------------------------------------------------------
     hoverable_images = [images.author, images.menubar_CLT]
     sg.theme('Default1')
-    mf = mainframe(images)  # MainFrame object, see classes.py
+    mf = cl.mainframe(images)  # MainFrame object, see classes.py
     window = make.Mainframe(sg, images, theme='Default1', frame=mf)
     # mf.window = window
     # mf.con_graph = mf.window['convolution graph']
@@ -234,8 +232,14 @@ def main():
             mf.mean_and_deviation(update=True)
 
         elif event == 'up' or event == 'down' or event == 'dice':
-            delta = 1 if event == 'up' else -1
-            mf.dice_change(mf.dice + delta)
+            if event != 'dice':
+                delta = 1 if event == 'up' else -1
+                mf.dice_change(mf.dice + delta)
+            else:
+                try:
+                    mf.dice_change(value=mf.values[event])
+                except ValueError as ve:
+                    error_popup('Value Error', ve)
 
         elif event == 'go':  # Run the show
             # Get the number of dice to roll and rolls to perform
@@ -244,7 +248,7 @@ def main():
                     # Run the simulation
                     mf.simulate = True
                     mf.window['simulation graph'].erase()
-                    sim = simulation(mf)
+                    sim = cl.simulation(mf)
 
             except ValueError as ve:
                 mf.simulate = False
@@ -256,25 +260,29 @@ def main():
             window['Pause'].update(text=new_text)
 
         elif event == 'convolution graph':
-            print(f"[LOG] pressed {event}: {mf.values[event]}")
             try:
-                hit_bin: bar = None
-                mf.convolution.selection_box_id, hit_bin = mf.activate_hit_detect(click=mf.values[event], graph=mf.convolution.graph, event=event,
-                                                                                   objects=mf.convolution.bins, prev_selection=(mf.convolution.selection_box_id, None))
-                if hit_bin:
-                    print(f"Sum: {hit_bin.bin}")
+                hit_bin: cl.bar = None
+                mf.convolution.selection_box_id, hit_bin = mf.activate_hit_detect(
+                    click=mf.values[event], graph=mf.convolution.graph, event=event,
+                    objects=mf.convolution.bins, prev_selection=(mf.convolution.selection_box_id, None)
+                )
             except TypeError:
                 mf.convolution.selection_box_id = None
 
         
         elif event == 'simulation graph' and sim:
-            print(f"[LOG] pressed {event}: {mf.values[event]}")
             try:
-                sim.selection_box_id, hit_roll = mf.activate_hit_detect(click=mf.values[event], graph=sim_graph, event=event, objects=sim.rolls, prev_selection=(sim.selection_box_id, None))
-                if hit_roll:
-                    print(f"Roll: {hit_roll.roll_number}")
+                hit_roll: cl.roll = None
+                sim.selection_box_id, hit_roll = mf.activate_hit_detect(
+                    click=mf.values[event], graph=sim_graph, event=event, 
+                    objects=sim.rolls, prev_selection=(sim.selection_box_id, None)
+                )
+                sim.displaying_roll = True
+                # hit_roll.display()
             except TypeError:
                 sim.selection_box_id = None
+                sim.displaying_roll = False
+                sim.delete_ids()
 
 
         
@@ -283,11 +291,11 @@ def main():
         ######################################
         if mf.simulate:
             if sim.trial_number <= sim.number_of_rolls:
-                print(sim.trial_number)
                 sim.roll_dice(sim.trial_number)
                 sim.trial_number += 1
             else:
                 mf.simulate = False
+                # mf.window['dice gif'].update(data=None)
 
     mf.window.close()
 

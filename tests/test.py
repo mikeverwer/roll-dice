@@ -1,11 +1,3 @@
-import numpy as np
+import random as r
 
-def rnd(number):
-    a = number // 10
-    b = round(a / 5) * 5
-    return b
-
-
-print(rnd(271))
-
-print(f"{np.gcd(6, 16)}")
+print(r.randint(1, 6))

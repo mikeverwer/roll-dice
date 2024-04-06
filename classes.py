@@ -2,6 +2,27 @@ import random
 import PySimpleGUI as sg
 import numpy as np
 
+"""
+The classes required for the Roll Dice simulation window.  The utilization of the classes is described below.
+
+A `mainframe` houses the window sg object, values dictionary, and the convolution of the `n` die.
+
+A `convolution` is an object that has a convoluted distribution graph with each of the bars of the graph being
+their own individual `bar` objects.  
+
+The `simulation` class controls the entire simulation. It is invoked as an object in main and the step is 
+incremented there.  The simulation creates `roll` objects and draws them on the graph.  
+Each `roll` is remembered by the `simulation` and, when selected, will display the outcome of each die rolled.
+
+Note: A `simulation` requires a `mainframe` as an initializing variable.
+"""
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Mainframe - An object that has the sg.Window and the values from window.read() as well as all of the required
+#             variables for the simulation and convolution graphs. Events are explicitly handled in main, but 
+#             most events have mainframe class methods that handle all actions.
+# ----------------------------------------------------------------------------------------------------------------------
 class mainframe:
     def __init__(self, images=None, window=None, values={}):
         print('[LOG] Initializing frame... ', end='')
@@ -101,12 +122,12 @@ class mainframe:
             if not found:
                 if Object.is_hit(click):
                     found = True
-                    Object.display=True
                     selection_id = graph.draw_rectangle(Object.hitbox[0], Object.hitbox[1], 'magenta')
-                    print(f'found {Object}')
+                    print(f'found: {Object}\n')
+                    Object.display()
                     return selection_id, Object
         if not found:
-            print('Found nothing.')
+            print('found: nothing.\n')
 
 
     def add_preset(self, new_preset: str):
@@ -220,12 +241,26 @@ class mainframe:
     def dice_change(self, value=None):
         if value is None:
             value = self.dice
-        self.dice = value if value > 0 else 1
-        self.window['dice'].update(value=self.dice)
-        self.window['dist tab'].update(title=f' The Probability Distribution for the Sum of {self.dice} Dice ')
-        self.convolution = convolution(self)
+        # inheritance
+        try:
+            if value == '':
+                raise Exception
+            value = int(value)
+            self.dice = value if value > 0 else 1
+            self.window['dice'].update(value=self.dice)
+            self.window['dist tab'].update(title=f' The Probability Distribution for the Sum of {self.dice} Dice ')
+            self.convolution = convolution(self)
+        except ValueError:
+            raise ValueError('The number of dice must be a non-negative integer.')
+        except Exception:
+            self.dice = self.dice
+            print(self.dice)
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Convolution - An object that lives in a `mainframe`. It creates a convoluted probability distribution out of `bar` 
+# objects
+# ----------------------------------------------------------------------------------------------------------------------
 class convolution:
     def __init__(self, frame: mainframe):
         if frame.con_graph is None:
@@ -330,16 +365,16 @@ class convolution:
         x_tick_diff = len(self.possible_outcomes) // 5  # ensures there are always 6 tick labels
         for i, bin in enumerate(self.possible_outcomes):
             box_center = self.bin_width * (i + 0.5)
-            self.graph.draw_line((box_center, -1), (box_center, -10))   # box_center = self.box_width * (i + 0.5)
+            self.graph.draw_line((box_center, -1), (box_center, -5))   # box_center = self.box_width * (i + 0.5)
             if i % x_tick_diff == 0:
-                self.graph.draw_text(f'{bin}', location=(box_center, -15))
+                self.graph.draw_text(f'{bin}', location=(box_center, -10))
  
     
     def find_sizes(self):
         highest_probability = max(self.conv_dist)
         highest_point = self.top_right[1] * 0.75
         self.scalar = highest_point / highest_probability
-        print('about to trim')
+        # print('about to trim')
         # self.trim_outcomes()
         bins = len(self.conv_dist)
         self.bin_width = self.top_right[0] // bins
@@ -364,6 +399,9 @@ class convolution:
         pass
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Bar - A member of a convolution
+# ----------------------------------------------------------------------------------------------------------------------
 class bar:
     def __init__(self, graph, bin, prob, size, coord):
         self.graph = graph
@@ -372,11 +410,10 @@ class bar:
         self.size = size
         self.x_coord = coord
         self.hitbox = self.make_hitbox()  # (top-left, bottom-right)
-        self.display = False
         self.draw_bar(*self.hitbox)
 
     def __repr__(self) -> str:
-        return f"Sum = {self.bin}\n"
+        return f"Sum = {self.bin}, probability = {self.probability}"
     
     def make_hitbox(self):
         top_left = (self.x_coord, self.size[1])
@@ -410,30 +447,62 @@ class bar:
     
     def display(self):
         return
+    
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Die Face - used by the simulation to display each rolled die on the left side
+# ----------------------------------------------------------------------------------------------------------------------
+class die_face:
+    def __init__(self, graph: sg.Graph, images, stack_position, x=-73, y=55, y_sep=40):
+        self.stack_position = stack_position
+        self.face_number = 1
+        self.graph = graph
+        self.location = (x, (self.stack_position * y_sep) + y)
+        self.images = {
+            1: images.die1,
+            2: images.die2,
+            3: images.die3,
+            4: images.die4,
+            5: images.die5,
+            6: images.die6,
+        }
+        self.image_id = None
+        self.image_data = self.set_image()
+
+    def erase(self):
+        self.graph.delete_figure(self.image_id)
+        self.image_id = None
+
+    def set_image(self, number = None):
+        if number:
+            self.face_number = number
+        if self.image_id is not None:
+            self.erase()
+        self.image_data = self.images[self.face_number]
+        self.image_id = self.graph.draw_image(data=self.image_data, location=self.location)
 
 
-
+# ----------------------------------------------------------------------------------------------------------------------
+# Simulation - Creates `roll` objects and draws them on the graph according to their sum, frequency, and size.
+# ----------------------------------------------------------------------------------------------------------------------
 class simulation:
     def __init__(self, frame: mainframe):
-        print('Beginning the simulation, enjoy!')
+        print('\nBeginning the simulation, enjoy!')
         # inheritance
         try:
             self.f: mainframe = frame
             self.graph: sg.Graph = self.f.window['simulation graph']
             self.dist: list[float] = [x / 100 for x in self.f.die_distribution]
+            self.number_of_dice: int = int(self.f.dice)
             self.number_of_rolls: int = int(self.f.values['rolls'])
-            self.number_of_dice: int = int(self.f.values['dice'])
-            if self.number_of_dice < 1 or self.number_of_rolls < 1:
-                print('this ran from the try block')
+            if int(self.number_of_rolls) < 1:
                 raise Exception
+        except Exception:
+            print("Cancelling... Could not gather the required inputs.")
+            raise ValueError("The number of rolls must be greater than zero.")
         except:
             print("Cancelling... Could not gather the required inputs.")
-            try:
-                if self.number_of_dice < 1 or self.number_of_rolls < 1:
-                    print('this ran from the except block')
-                    raise ValueError("We must roll at least once.\nPlease enter a non-zero value.")
-            except:
-                raise ValueError("Please enter integers into the input fields.")
+            raise ValueError("Inputs must be positive integers.")
         # Self
         # self.f.window['log'].update(value='')
         self.f.window['sim column'].Widget.canvas.yview_moveto(1.0)
@@ -450,6 +519,10 @@ class simulation:
         self.top_right = (self.f.sim_graph_size[0] - sum(self.f.sim_margins[0]), self.f.sim_graph_size[1] - sum(self.f.sim_margins[1]))
         self.box_width, self.box_height = self.find_box_size()
         self.drawing_area()
+        self.die_faces: list[die_face] = None
+        self.draw_dice()
+        self.display_ids: list = []
+        self.displaying_roll = False
         self.trial_number = 1
 
     def drawing_area(self):
@@ -475,7 +548,23 @@ class simulation:
             self.graph.draw_line((box_center, -1), (box_center, -10))   # box_center = self.box_width * (i + 0.5)
             if i % x_tick_diff == 0:
                 self.graph.draw_text(f'{bin}', location=(box_center, -15))
+    
+    def delete_ids(self, id_list=None):
+        if id_list is None:
+            for id in self.display_ids:
+                self.graph.delete_figure(id)
+                self.display_ids = []
+        else:
+            for id in id_list:
+                self.graph.delete_figure(id)
+            return []
 
+    
+    def draw_dice(self):
+        self.die_faces = []
+        for dice in range(self.number_of_dice):
+            new_die_face = die_face(graph=self.graph, images=self.f.images, stack_position=dice)
+            self.die_faces.append(new_die_face)
     
     def find_box_size(self):
         # should be a smooth function from 3px to x% of drawing area
@@ -495,9 +584,6 @@ class simulation:
         box_width = self.top_right[0] // len(self.convolution)
         print(f'{box_width = }, {box_height = }')
         return box_width, box_height
- 
-    def draw_axis(self):
-        ticks = None
 
     def make_partition(self, distribution=None):
         if distribution is None:
@@ -511,35 +597,47 @@ class simulation:
     
     def roll_dice(self, count:int = 1):
         counter = self.outcome_counter
+        # b64_image_data = getattr(self.f.images, f'die{(count % 6) + 1}')
+        # self.f.window['dice gif'].update(data=b64_image_data)
         box_size = (self.box_width, self.box_height)
         graph = self.graph
         if count == 1:
             prev_roll = None
         else:
             prev_roll = self.rolls[count - 2]  # - 2 since count starts at 1, but rolls index starts at 0
-        this_roll = roll(self, roll_number=count, partition=self.partition, counter=counter, box_size=box_size, 
+        this_roll = roll(sim=self, roll_number=count, partition=self.partition, counter=counter, box_size=box_size, 
                          graph=graph, dice=self.number_of_dice, previous_roll=prev_roll)
         self.rolls.append(this_roll)
-        print(this_roll.outcome)
         return this_roll
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Roll - A member of a simulation
+# ----------------------------------------------------------------------------------------------------------------------
 class roll:
     def __init__(self, sim: simulation, roll_number: int, partition, counter, box_size, graph, dice, previous_roll):
         self.sim = sim
         self.roll_number = roll_number
         self.box_width = box_size[0]
         self.box_height = box_size[1]
-        self.graph = graph
+        self.graph: sg.Graph = graph
         self.dice = dice
         self.prev_roll = previous_roll
 
         outcome = [0] * 6
-        for _ in range(dice):
+        self.individual_outcomes = []
+        for i in range(dice):
             roll = random.random()
             for j in range(7):
                 if partition[j] <= roll < partition[j + 1]:
                     outcome[j] += 1
+                    try:
+                        if not self.sim.displaying_roll:
+                            sim.die_faces[i].set_image(j + 1)
+                        self.individual_outcomes.append(j + 1)
+                    except TypeError as te:
+                        print(f"index out of range, {i = }, {j + 1 = }\n{te}")
+                        raise TypeError
         this_sum = np.dot(outcome, [1, 2, 3, 4, 5, 6])
 
         try:
@@ -560,19 +658,16 @@ class roll:
         self.px_coord = (x_coord, y_coord)
         self.grid_coord = (self.sum - dice, self.frequency - 1)
         self.hitbox = self.make_hitbox()
-        self.id: int 
+        self.id: int
         self.draw_roll(*self.hitbox)
-        self.display = self.is_hit(click=None)
-        
-    def __repr__(self) -> str:
-        return f""
-    
+
 
     def make_hitbox(self):
         # top-left, bottom-right
         top_left = (self.px_coord[0], self.px_coord[1] + self.box_height)
         bottom_right = self.px_coord[0] + self.box_width, self.px_coord[1]
         return top_left, bottom_right
+    
     
     def draw_roll(self, t_l=None, b_r=None, fill='green'):
         if t_l is None:
@@ -583,6 +678,7 @@ class roll:
             previous_box_id = self.prev_roll.id
             self.graph.TKCanvas.itemconfig(previous_box_id, fill='cyan')
         self.id = self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
+
     
     def is_hit(self, click: tuple, xoffset: int = 0, yoffset: int = 0, offset: None | int = None):
         if offset is not None:
@@ -600,3 +696,20 @@ class roll:
                 return False
         else:
             return False
+        
+    
+    def display(self):
+        for i, outcome in enumerate(self.individual_outcomes):
+            self.sim.die_faces[i].set_image(outcome)
+        self.sim.delete_ids()
+        self.sim.display_ids.append(self.graph.draw_text(self.sum, location=(-62, 0), color='black', font='_ 16 bold'))
+        self.sim.display_ids.append(self.graph.draw_line((-40, 20), (-84, 20)))
+        self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-45, -30), color='magenta', font='_ 16 bold'))
+
+        # self.graph.draw_line((-40, 0), (-84, 0))
+        # x=-73, y=35, y_sep=40
+
+        
+    def __repr__(self) -> str:
+        return f"Roll: {self.roll_number}\n  Outcome = {self.sum}, Occurrence = {self.frequency}  \n{' ' * 18}1  2  3  4  5  6\n  Dice Outcomes: {self.outcome}\n  {self.individual_outcomes = }"
+
