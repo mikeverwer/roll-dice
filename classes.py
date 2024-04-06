@@ -1,3 +1,4 @@
+import matplotlib.ticker as ticker
 import random
 import PySimpleGUI as sg
 import numpy as np
@@ -10,12 +11,13 @@ class mainframe:
         self.values = values
         self.locked_values = [0] * 6
         self.locks = [False] * 6
-        self.preset_list = ['Fair', 'Sloped', 'Valley', 'Hill']
+        self.preset_list = ['Fair', 'Sloped', 'Valley', 'Hill', 'Alternating']
         self.presets = {
                'Fair': [float(100 / 6), float(100 / 6), float(100 / 6), float(100 / 6), float(100 / 6), 100 - float(500 / 6)],
                'Sloped': [47, 23, 16, 8, 4, 2],
                'Valley': [40, 8, 2, 3, 9, 38],
-               'Hill': [2, 12, 40, 38, 7, 1]
+               'Hill': [2, 12, 40, 38, 7, 1],
+               'Alternating': [32, 0, 32, 0, 32, 4],
         }
         self.die_distribution = self.random_distribution(get_var=True)
         print(f"Starting die distribution: {self.die_distribution}", end='... ')
@@ -23,7 +25,7 @@ class mainframe:
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 64
         self.sim_margins: list[list[int]] = [[100, 75], [50, 50]]  #(left, right), (bottom, top)
-        self.sim_graph_size = (1000, 650)
+        self.sim_graph_size = (996, 10000)
         self.con_margins: list[list[int]] = [[25, 25], [25, 10]]  #(left, right), (bottom, top)
         self.con_graph_size = (450, 325)
         self.con_graph = None
@@ -385,11 +387,11 @@ class simulation:
         print('Beginning the simulation, enjoy!')
         # inheritance
         try:
-            self.f = frame
-            self.graph = self.f.window['simulation graph']
-            self.dist = [x / 100 for x in self.f.die_distribution]
-            self.number_of_rolls = int(self.f.values['rolls'])
-            self.number_of_dice = int(self.f.values['dice'])
+            self.f: mainframe = frame
+            self.graph: sg.Graph = self.f.window['simulation graph']
+            self.dist: list[float] = [x / 100 for x in self.f.die_distribution]
+            self.number_of_rolls: int = int(self.f.values['rolls'])
+            self.number_of_dice: int = int(self.f.values['dice'])
             if self.number_of_dice < 1 or self.number_of_rolls < 1:
                 raise Exception
         except:
@@ -402,35 +404,73 @@ class simulation:
                 raise ValueError("Please enter integers into the input fields.")
         # Self
         # self.f.window['log'].update(value='')
+        self.f.window['sim column'].Widget.canvas.yview_moveto(1.0)
         self.selection_box_id = None
         self.partition = self.make_partition()
-        self.possible_outcomes = list(range(self.number_of_dice - 1, (6 * self.number_of_dice) + 1))
+        self.possible_outcomes = list(range(self.number_of_dice, (6 * self.number_of_dice) + 1))
         self.outcome_counter: dict[int: int] = {}
         self.rolls: list[roll] = []
-        self.convolution = self.f.convolution.conv_dist       
+        self.convolution: list[float] = self.f.convolution.conv_dist       
         self.outcome_counter = {outcome: 0 for outcome in self.possible_outcomes}
         # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
         # Current Drawing Area, (x, y) = (1000, 400) ==> (0, 0) to (775, 300)
 
         self.top_right = (self.f.sim_graph_size[0] - sum(self.f.sim_margins[0]), self.f.sim_graph_size[1] - sum(self.f.sim_margins[1]))
-        self.drawing_area = self.graph.draw_rectangle((0,0), self.top_right)
         self.box_width, self.box_height = self.find_box_size()
+        self.drawing_area()
         self.trial_number = 1
+
+    def drawing_area(self):
+        self.graph.draw_rectangle((0,0), self.top_right)
+        # Draw y-axis tick marks, labels, and grid lines
+        y_tick_diff = self.number_of_rolls // 15 
+        y_tick_diff = round(y_tick_diff / 5) * 5 if self.number_of_rolls > 44 else 5  # closest multiple of 5 to one tenth of the max rolls
+        delta_y = y_tick_diff * self.box_height  # height difference in pixels
+        y_tick_height = 0
+        y_tick = 0
+        while y_tick_height < self.top_right[1]:
+            string_length = len(str(self.number_of_rolls)) if self.number_of_rolls > 100 else 3
+            tick_string = f'{y_tick:>{string_length}}'
+            self.graph.draw_line((-8, y_tick_height), (0, y_tick_height))
+            self.graph.draw_line((0, y_tick_height), (self.top_right[0], y_tick_height), color='#dcdcdc')
+            self.graph.draw_text(tick_string, location=(-(len(tick_string) * 6.33) , y_tick_height)) 
+            y_tick_height += delta_y
+            y_tick += y_tick_diff
+        # Draw x-axis tick marks and labels
+        box_center = self.box_width / 2
+        x_tick_diff = np.gcd(6, (self.possible_outcomes[-1] - self.possible_outcomes[0]))
+        x_tick_diff = len(self.possible_outcomes) // 6
+        print(f"{x_tick_diff = }")
+        # locator = ticker.AutoLocator()
+        # locator.axis.set_view_interval((self.possible_outcomes[0], self.possible_outcomes[-1]))
+        # xtick_positions = locator()
+        # xtick_intervals = [xtick_positions[i + 1] - xtick_positions[i] for i in range(len(xtick_positions)-1)]
+   
+        # x_tick_diff = (self.possible_outcomes[-1] - self.possible_outcomes[0] + 1) // 6
+        for i, bin in enumerate(self.possible_outcomes):
+            self.graph.draw_line(((i * self.box_width) + box_center, -1), ((i * self.box_width) + box_center, -10))
+            if i % x_tick_diff == 0:
+            # if i in xtick_intervals:
+                self.graph.draw_text(f'{bin}', location=((i * self.box_width) + box_center, -15))
+
+
+
     
     def find_box_size(self):
         # should be a smooth function from 3px to x% of drawing area
+        drawing_window_height = 630
         highest_probability = float(max(self.convolution))
         print(f'{highest_probability = }', end=" : ")
         approx_most_outcomes = self.number_of_rolls * highest_probability * 1.5
-        approx_most_outcomes = int(approx_most_outcomes)
+        approx_most_outcomes = int(approx_most_outcomes) if approx_most_outcomes > 1 else 1
         print(f'{approx_most_outcomes = }')
-        box_height = self.top_right[1] // approx_most_outcomes
+        box_height = drawing_window_height // approx_most_outcomes
         worst_case = approx_most_outcomes * box_height
         print(f"{worst_case = }")
         if box_height < 2:
             box_height = 2
-        if box_height > 0.10 * self.top_right[1]:
-            box_height = 0.08 * self.top_right[1]
+        if box_height > 0.10 * drawing_window_height:
+            box_height = 0.08 * drawing_window_height
         box_width = self.top_right[0] // len(self.convolution)
         print(f'{box_width = }, {box_height = }')
         return box_width, box_height

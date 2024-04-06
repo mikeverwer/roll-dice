@@ -1,4 +1,5 @@
 from types import ModuleType
+import PySimpleGUI
 # from classes import mainframe
 import classes as cl
 
@@ -21,7 +22,7 @@ def do_binds(window, button_images):
         window[('hover', image)].bind('<Leave>', 'EXIT')
 
 
-def Mainframe(sg: ModuleType, images: dict, theme, frame: cl.mainframe):
+def Mainframe(sg: PySimpleGUI, images: dict, theme, frame: cl.mainframe):
     sg.theme(theme)
     screen_width, screen_height = sg.Window.get_screen_size()
 
@@ -122,6 +123,13 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: cl.mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
     # Graphs 
     # ----------------------------------------------------------------------------------------------------------------------
+
+    # novelty_graph_column = sg.Column(layout=[
+    #         [sg.Stretch(), novelty_graph, sg.Stretch()]
+    #     ], scrollable=True, vertical_scroll_only=True, size=(graph_dimensions['nx'] + 10, desired_window_height), key='novelty column', expand_y=True, expand_x=True, 
+    #     sbar_width=10, sbar_arrow_width=10, sbar_relief='flat', sbar_arrow_color=black if mode == 'dark' else white, sbar_background_color=black if mode == 'dark' else white, sbar_trough_color='gray' if mode == 'light' else None
+    # )
+
     con_dx = frame.con_margins[0][0]
     con_dy = frame.con_margins[1][0]
     con_x = frame.con_graph_size[0]
@@ -133,13 +141,24 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: cl.mainframe):
 
     convolution_graph_layout = [
         [sg.Push(), sg.Graph((con_x, con_y), (-con_dx, -con_dy), (con_x - con_dx, con_y - con_dy), background_color='white', key = 'convolution graph',
-                expand_y=True, enable_events=True), sg.Push()]
+                expand_y=True, expand_x=True, enable_events=True), sg.Push()]
         ]
 
-    plots_layout = [
+    sim_layout = [
         [sg.Graph((sim_x, sim_y), (-sim_dx, -sim_dy), (sim_x - sim_dx, sim_y - sim_dy), background_color='white', key = 'simulation graph',
                   expand_y=True, enable_events=True)]
     ]
+
+    smallest_height = 630
+    sim_column = [
+        [sg.Stretch(), 
+         sg.Column(layout=sim_layout, scrollable=True, vertical_scroll_only=True, size=(frame.sim_graph_size[0], smallest_height), key='sim column',
+                   expand_x=True, expand_y=True, vertical_alignment='top',
+                   sbar_width=12, sbar_arrow_width=6, sbar_relief='flat', sbar_arrow_color='#1b1b1b', sbar_background_color='white', sbar_trough_color='#dcdcdc'
+                   ),
+         sg.Stretch()]
+    ]
+    sim_layout = sim_column
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Finalize
@@ -154,7 +173,7 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: cl.mainframe):
          sg.Push(), sg.Image(data=images.menubar1_r), sg.Image(data=images.author, enable_events=True, key=('hover', 'author'))]
     ]
 
-    plots_layout += sim_inter_layout
+    sim_layout += sim_inter_layout
 
     grid_layout += [[sg.TabGroup([[sg.Tab(frame.convolution_title, layout=convolution_graph_layout, k='dist tab'),
                                    sg.Tab('    Log    ', logging_layout, k='log tab')
@@ -165,7 +184,7 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: cl.mainframe):
     layout += menu_def
 
     layout += [
-        [sg.Column(grid_layout, element_justification='center', vertical_alignment='top'), sg.Column(plots_layout)],
+        [sg.Column(grid_layout, element_justification='center', vertical_alignment='top'), sg.Column(sim_layout)],
     ]
 
     # ----------------------------------------------------------------------------------------------------------------------
@@ -177,6 +196,7 @@ def Mainframe(sg: ModuleType, images: dict, theme, frame: cl.mainframe):
         border_depth=0, icon=frame.images.lock6)  # was (60, 1)
     do_binds(window, hoverable_buttons)
     update_frame(window, frame)
+    window['sim column'].Widget.canvas.yview_moveto(1.0)
     
     # ----------------------------------------------------------------------------------------------------------------------
     # Hotkeys

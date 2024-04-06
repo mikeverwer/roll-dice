@@ -263,8 +263,6 @@ def main():
             except ValueError as ve:
                 mf.simulate = False
                 error_popup('Value Error', ve)
-                # sg.popup_quick_message(f'\nValue Error:\n\n{ve}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=5)
-                # sg.Popup(f'Value Error:\n{ve}\n', auto_close=True)
         
         elif event == 'Pause' and sim:
             mf.simulate = not mf.simulate
