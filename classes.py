@@ -17,6 +17,17 @@ Each `roll` is remembered by the `simulation` and, when selected, will display t
 Note: A `simulation` requires a `mainframe` as an initializing variable.
 """
 
+# ----------------------------------------------------------------------------------------------------------------------
+# EventHandler - A class that handles the events from the event loop in main
+# ----------------------------------------------------------------------------------------------------------------------
+class EventHandler:
+    def __init__(self, frame) -> None:
+        self.mf = frame
+
+    def handle(self, event) -> None:
+        mf = self.mf
+        # the code from inside the event loop goes here the event.
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Mainframe - An object that has the sg.Window and the values from window.read() as well as all of the required

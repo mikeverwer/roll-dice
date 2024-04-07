@@ -1,5 +1,6 @@
 # To Do
 
+- make the simulation a proper element of the frame and clean up how it is handled by hit_detection, convolution, and main/event_handler
 - add x grid marks to simulation graph
 - fix "fair" die being unfair
 - pre-sim checklist

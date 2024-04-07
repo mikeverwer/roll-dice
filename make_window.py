@@ -161,7 +161,7 @@ def Mainframe(sg: PySimpleGUI, images: dict, theme, frame: cl.mainframe):
         ]
 
     sim_layout = [
-        [sg.Graph((sim_x, sim_y), (-sim_dx, -sim_dy), (sim_x - sim_dx, sim_y - sim_dy), background_color='white', key = 'simulation graph',
+        [sg.Graph((sim_x, sim_y), (-sim_dx, -sim_dy), (sim_x - sim_dx, sim_y - sim_dy), background_color='#f0f0f0', key = 'simulation graph',
                   expand_y=True, enable_events=True)]
     ]
 

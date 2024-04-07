@@ -1,3 +1,13 @@
-import random as r
+class MyClass:
+    def __init__(self) -> None:
+        self.a = 0
 
-print(r.randint(1, 6))
+    def __repr__(self) -> str:
+        return f"{self.a = }"
+    
+
+A = MyClass()
+B = A
+B.a = 1
+print(A)
+
