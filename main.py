@@ -126,8 +126,8 @@ def main():
     # ---------------------------------------------------------------------------------------------------------------------
     hoverable_images = [images.author, images.menubar_CLT]
     sg.theme('Default1')
-    mf = cl.mainframe(images)  # MainFrame object, see classes.py
-    window = make.Mainframe(sg, images, theme='Default1', frame=mf)
+    mf = cl.Mainframe(images)  # MainFrame object, see classes.py
+    window = make.Mainframe_func(sg, images, theme='Default1', frame=mf)
 
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
@@ -232,7 +232,7 @@ def main():
                     # Run the simulation
                     mf.simulate = True
                     mf.window['simulation graph'].erase()
-                    mf.sim = cl.simulation(mf)
+                    mf.sim = cl.Simulation(mf)
 
             except ValueError as ve:
                 mf.simulate = False
@@ -245,7 +245,7 @@ def main():
 
         elif event == 'convolution graph':
             try:
-                hit_bin: cl.bar = None
+                hit_bin: cl.Bar = None
                 mf.convolution.selection_box_id, hit_bin = mf.activate_hit_detect(
                     click=mf.values[event], graph=mf.convolution.graph, event=event,
                     objects=mf.convolution.bins, prev_selection=(mf.convolution.selection_box_id, None)
@@ -256,7 +256,7 @@ def main():
         
         elif event == 'simulation graph' and mf.sim:
             try:
-                hit_roll: cl.roll = None
+                hit_roll: cl.Roll = None
                 mf.sim.selection_box_id, hit_roll = mf.activate_hit_detect(
                     click=mf.values[event], graph=mf.sim_graph, event=event, 
                     objects=mf.sim.rolls, prev_selection=(mf.sim.selection_box_id, None)
