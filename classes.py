@@ -48,12 +48,16 @@ class mainframe:
         self.sim_graph_size = (996, 10000)
         self.con_margins: list[list[int]] = [[25, 25], [25, 10]]  #(left, right), (bottom, top)
         self.con_graph_size = (450, 325)
-        self.con_graph = None
+        self.con_graph: sg.Graph = None
+        self.sim_graph: sg.Graph = None
         self.extra_space = 0
         self.logging_UI_text = ' '
         self.simulate = False
-        self.convolution = convolution(self)
+        self.convolution: convolution = convolution(self)
         self.convolution_title = f' The Probability Distribution for the Sum of {self.dice} Dice '
+        self.convolution_display_ids = []
+        self.convolution_selection_lines = []
+        self.sim: simulation = None
         print(f'Complete!\n')
         
 
@@ -379,6 +383,7 @@ class convolution:
         bins = len(self.conv_dist)
         self.bin_width = self.top_right[0] // bins
     
+
     def make_bars(self):
         self.graph.erase()
         self.bins: list[bar] = []
@@ -392,19 +397,18 @@ class convolution:
             height = x * self.scalar
             x_location = i * self.bin_width
             bin_number = i + self.number_of_dice
-            new_bar = bar(graph=self.graph, bin=bin_number, prob=probability, size=(self.bin_width, height), coord=x_location)
+            new_bar = bar(conv=self, bin=bin_number, prob=probability, size=(self.bin_width, height), coord=x_location)
             self.bins.append(new_bar)
-
-    def display(self):
-        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Bar - A member of a convolution
 # ----------------------------------------------------------------------------------------------------------------------
 class bar:
-    def __init__(self, graph, bin, prob, size, coord):
-        self.graph = graph
+    def __init__(self, conv, bin, prob, size, coord):
+        self.conv: convolution = conv
+        self.graph = self.conv.graph
+        self.sim_graph = self.conv.f.sim_graph
         self.bin = bin
         self.probability = prob
         self.size = size
@@ -419,8 +423,7 @@ class bar:
         top_left = (self.x_coord, self.size[1])
         bottom_right = (self.x_coord + self.size[0], 0)
         return top_left, bottom_right
-    
-        
+           
     def draw_bar(self, t_l=None, b_r=None, fill='RoyalBlue4'):
         if t_l is None:
             t_l = (0, self.size[1])
@@ -446,6 +449,16 @@ class bar:
             return False
     
     def display(self):
+        if self.conv.f.sim and False:  # turned off for now
+            self.conv.f.convolution_display_ids = self.conv.f.sim.delete_ids(self.conv.f.convolution_display_ids)
+            self.conv.f.convolution_selection_lines = self.conv.f.sim.delete_ids(self.conv.f.convolution_selection_lines)
+            # Draw bin outline on sim graph
+            x1 = (self.bin - self.conv.number_of_dice) * self.conv.f.sim.box_width
+            x2 = (self.bin - self.conv.number_of_dice + 1) * self.conv.f.sim.box_width
+            y = self.conv.f.sim.top_right[1]
+            self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x1, y), color='#dcdcdc'))
+            self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x2, y), color='#dcdcdc'))
+
         return
     
 

@@ -107,14 +107,7 @@ def clear_canvas(canvas_agg):
     canvas_agg.get_tk_widget().destroy()  # Destroy the existing canvas
     plt.close()
 
-
-def do_binds(window, button_images):
-    """
-    Bind the given images to tk.widget.bind('<Enter>' and '<Exit>') events.
-    """
-    for image_data in button_images:
-        window[('hover', image_data)].bind('<Enter>', 'ENTER')
-        window[('hover', image_data)].bind('<Leave>', 'EXIT')
+# ----------------------------------------------------------------------------------------------------------------------
 
 def error_popup(error, message):
     sg.popup_quick_message(f'\n{error}:\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=5, grab_anywhere=True)
@@ -135,21 +128,12 @@ def main():
     sg.theme('Default1')
     mf = cl.mainframe(images)  # MainFrame object, see classes.py
     window = make.Mainframe(sg, images, theme='Default1', frame=mf)
-    # mf.window = window
-    # mf.con_graph = mf.window['convolution graph']
-    # mf.convolution.graph = mf.con_graph
-    # mf.convolution.make_bars()
-    # sim = None
-    # mf.convolution.graph.grab_anywhere_exclude()
-    # mf.window['simulation graph'].grab_anywhere_exclude()
 
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
-    selected_roll_id = None
-    selected_bar_id = None
     logging = False
     full_logging = False
-    sim = None
+    mf.sim = None
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Event Loop
@@ -157,7 +141,7 @@ def main():
 
     while True:
         event, mf.values = mf.window.read(timeout = 1000 // mf.update_interval)
-        sim_graph = mf.window['simulation graph']
+        mf.sim_graph = mf.window['simulation graph']
         mf.con_graph = mf.window['convolution graph']
         mf.convolution.graph = mf.con_graph
 
@@ -248,13 +232,13 @@ def main():
                     # Run the simulation
                     mf.simulate = True
                     mf.window['simulation graph'].erase()
-                    sim = cl.simulation(mf)
+                    mf.sim = cl.simulation(mf)
 
             except ValueError as ve:
                 mf.simulate = False
                 error_popup('Value Error', ve)
         
-        elif event == 'Pause' and sim:
+        elif event == 'Pause' and mf.sim:
             mf.simulate = not mf.simulate
             new_text = 'Pause' if mf.simulate else "Play"
             window['Pause'].update(text=new_text)
@@ -270,19 +254,18 @@ def main():
                 mf.convolution.selection_box_id = None
 
         
-        elif event == 'simulation graph' and sim:
+        elif event == 'simulation graph' and mf.sim:
             try:
                 hit_roll: cl.roll = None
-                sim.selection_box_id, hit_roll = mf.activate_hit_detect(
-                    click=mf.values[event], graph=sim_graph, event=event, 
-                    objects=sim.rolls, prev_selection=(sim.selection_box_id, None)
+                mf.sim.selection_box_id, hit_roll = mf.activate_hit_detect(
+                    click=mf.values[event], graph=mf.sim_graph, event=event, 
+                    objects=mf.sim.rolls, prev_selection=(mf.sim.selection_box_id, None)
                 )
-                sim.displaying_roll = True
-                # hit_roll.display()
+                mf.sim.displaying_roll = True
             except TypeError:
-                sim.selection_box_id = None
-                sim.displaying_roll = False
-                sim.delete_ids()
+                mf.sim.selection_box_id = None
+                mf.sim.displaying_roll = False
+                mf.sim.delete_ids()
 
 
         
@@ -290,9 +273,9 @@ def main():
         # Animation
         ######################################
         if mf.simulate:
-            if sim.trial_number <= sim.number_of_rolls:
-                sim.roll_dice(sim.trial_number)
-                sim.trial_number += 1
+            if mf.sim.trial_number <= mf.sim.number_of_rolls:
+                mf.sim.roll_dice(mf.sim.trial_number)
+                mf.sim.trial_number += 1
             else:
                 mf.simulate = False
                 # mf.window['dice gif'].update(data=None)
