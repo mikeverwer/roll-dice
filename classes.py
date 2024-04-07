@@ -34,7 +34,7 @@ class EventHandler:
 #             variables for the simulation and convolution graphs. Events are explicitly handled in main, but 
 #             most events have mainframe class methods that handle all actions.
 # ----------------------------------------------------------------------------------------------------------------------
-class mainframe:
+class Mainframe:
     def __init__(self, images=None, window=None, values={}):
         print('[LOG] Initializing frame... ', end='')
         self.images = images
@@ -59,12 +59,16 @@ class mainframe:
         self.sim_graph_size = (996, 10000)
         self.con_margins: list[list[int]] = [[25, 25], [25, 10]]  #(left, right), (bottom, top)
         self.con_graph_size = (450, 325)
-        self.con_graph = None
+        self.con_graph: sg.Graph = None
+        self.sim_graph: sg.Graph = None
+        self.sim: Simulation = None
         self.extra_space = 0
         self.logging_UI_text = ' '
         self.simulate = False
-        self.convolution = convolution(self)
+        self.convolution: Convolution = Convolution(self)
         self.convolution_title = f' The Probability Distribution for the Sum of {self.dice} Dice '
+        self.convolution_display_ids = []
+        self.convolution_selection_lines = []
         print(f'Complete!\n')
         
 
@@ -171,7 +175,7 @@ class mainframe:
 
         self.die_distribution = slider_values
         self.mean_and_deviation(slider_values)
-        self.convolution = convolution(self)
+        self.convolution = Convolution(self)
 
 
     def activate_slider(self, event, active_face=None, set_to_value=None):
@@ -242,7 +246,7 @@ class mainframe:
             # Finished moving, update related objects
             self.mean_and_deviation(slider_values)
             self.die_distribution = [_ for _ in slider_values]
-            self.convolution = convolution(self)
+            self.convolution = Convolution(self)
 
         else:  # Slider is locked, keep value constant
             self.values[event] = self.locked_values[int(event[-1]) - 1]
@@ -260,7 +264,7 @@ class mainframe:
             self.dice = value if value > 0 else 1
             self.window['dice'].update(value=self.dice)
             self.window['dist tab'].update(title=f' The Probability Distribution for the Sum of {self.dice} Dice ')
-            self.convolution = convolution(self)
+            self.convolution = Convolution(self)
         except ValueError:
             raise ValueError('The number of dice must be a non-negative integer.')
         except Exception:
@@ -272,12 +276,12 @@ class mainframe:
 # Convolution - An object that lives in a `mainframe`. It creates a convoluted probability distribution out of `bar` 
 # objects
 # ----------------------------------------------------------------------------------------------------------------------
-class convolution:
-    def __init__(self, frame: mainframe):
+class Convolution:
+    def __init__(self, frame: Mainframe):
         if frame.con_graph is None:
             print('Making Convolution', end='... ')
         self.f = frame
-        self.bins: list[bar] = []
+        self.bins: list[Bar] = []
         self.die_dist = frame.die_distribution
         self.graph = frame.con_graph
         if sum(self.die_dist) != 1:
@@ -390,9 +394,10 @@ class convolution:
         bins = len(self.conv_dist)
         self.bin_width = self.top_right[0] // bins
     
+
     def make_bars(self):
         self.graph.erase()
-        self.bins: list[bar] = []
+        self.bins: list[Bar] = []
         self.graph = self.f.con_graph
         self.top_right = (self.f.con_graph_size[0] - sum(self.f.con_margins[0]), self.f.con_graph_size[1] - sum(self.f.con_margins[1]))
         # find grid points
@@ -403,19 +408,18 @@ class convolution:
             height = x * self.scalar
             x_location = i * self.bin_width
             bin_number = i + self.number_of_dice
-            new_bar = bar(graph=self.graph, bin=bin_number, prob=probability, size=(self.bin_width, height), coord=x_location)
+            new_bar = Bar(conv=self, bin=bin_number, prob=probability, size=(self.bin_width, height), coord=x_location)
             self.bins.append(new_bar)
-
-    def display(self):
-        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Bar - A member of a convolution
 # ----------------------------------------------------------------------------------------------------------------------
-class bar:
-    def __init__(self, graph, bin, prob, size, coord):
-        self.graph = graph
+class Bar:
+    def __init__(self, conv, bin, prob, size, coord):
+        self.conv: Convolution = conv
+        self.graph = self.conv.graph
+        self.sim_graph = self.conv.f.sim_graph
         self.bin = bin
         self.probability = prob
         self.size = size
@@ -430,8 +434,7 @@ class bar:
         top_left = (self.x_coord, self.size[1])
         bottom_right = (self.x_coord + self.size[0], 0)
         return top_left, bottom_right
-    
-        
+           
     def draw_bar(self, t_l=None, b_r=None, fill='RoyalBlue4'):
         if t_l is None:
             t_l = (0, self.size[1])
@@ -457,13 +460,23 @@ class bar:
             return False
     
     def display(self):
+        if self.conv.f.sim and False:  # turned off for now
+            self.conv.f.convolution_display_ids = self.conv.f.sim.delete_ids(self.conv.f.convolution_display_ids)
+            self.conv.f.convolution_selection_lines = self.conv.f.sim.delete_ids(self.conv.f.convolution_selection_lines)
+            # Draw bin outline on sim graph
+            x1 = (self.bin - self.conv.number_of_dice) * self.conv.f.sim.box_width
+            x2 = (self.bin - self.conv.number_of_dice + 1) * self.conv.f.sim.box_width
+            y = self.conv.f.sim.top_right[1]
+            self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x1, y), color='#dcdcdc'))
+            self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x2, y), color='#dcdcdc'))
+
         return
     
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Die Face - used by the simulation to display each rolled die on the left side
 # ----------------------------------------------------------------------------------------------------------------------
-class die_face:
+class DieFace:
     def __init__(self, graph: sg.Graph, images, stack_position, x=-73, y=55, y_sep=40):
         self.stack_position = stack_position
         self.face_number = 1
@@ -496,12 +509,12 @@ class die_face:
 # ----------------------------------------------------------------------------------------------------------------------
 # Simulation - Creates `roll` objects and draws them on the graph according to their sum, frequency, and size.
 # ----------------------------------------------------------------------------------------------------------------------
-class simulation:
-    def __init__(self, frame: mainframe):
+class Simulation:
+    def __init__(self, frame: Mainframe):
         print('\nBeginning the simulation, enjoy!')
         # inheritance
         try:
-            self.f: mainframe = frame
+            self.f: Mainframe = frame
             self.graph: sg.Graph = self.f.window['simulation graph']
             self.dist: list[float] = [x / 100 for x in self.f.die_distribution]
             self.number_of_dice: int = int(self.f.dice)
@@ -521,7 +534,7 @@ class simulation:
         self.partition = self.make_partition()
         self.possible_outcomes = list(range(self.number_of_dice, (6 * self.number_of_dice) + 1))
         self.outcome_counter: dict[int: int] = {}
-        self.rolls: list[roll] = []
+        self.rolls: list[Roll] = []
         self.convolution: list[float] = self.f.convolution.conv_dist       
         self.outcome_counter = {outcome: 0 for outcome in self.possible_outcomes}
         # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
@@ -530,7 +543,7 @@ class simulation:
         self.top_right = (self.f.sim_graph_size[0] - sum(self.f.sim_margins[0]), self.f.sim_graph_size[1] - sum(self.f.sim_margins[1]))
         self.box_width, self.box_height = self.find_box_size()
         self.drawing_area()
-        self.die_faces: list[die_face] = None
+        self.die_faces: list[DieFace] = None
         self.draw_dice()
         self.display_ids: list = []
         self.displaying_roll = False
@@ -574,24 +587,24 @@ class simulation:
     def draw_dice(self):
         self.die_faces = []
         for dice in range(self.number_of_dice):
-            new_die_face = die_face(graph=self.graph, images=self.f.images, stack_position=dice)
+            new_die_face = DieFace(graph=self.graph, images=self.f.images, stack_position=dice)
             self.die_faces.append(new_die_face)
     
     def find_box_size(self):
         # should be a smooth function from 3px to x% of drawing area
-        drawing_window_height = 630
+        drawing_window_height = int(630 * 0.75)
         highest_probability = float(max(self.convolution))
         print(f'{highest_probability = }', end=" : ")
-        approx_most_outcomes = self.number_of_rolls * highest_probability * 1.5
+        approx_most_outcomes = self.number_of_rolls * highest_probability * 1
         approx_most_outcomes = int(approx_most_outcomes) if approx_most_outcomes > 1 else 1
         print(f'{approx_most_outcomes = }')
         box_height = drawing_window_height // approx_most_outcomes
-        worst_case = approx_most_outcomes * box_height
-        print(f"{worst_case = }")
+        worst_case_px_size = approx_most_outcomes * box_height
+        print(f"{worst_case_px_size = }")
         if box_height < 2:
             box_height = 2
         if box_height > 0.10 * drawing_window_height:
-            box_height = 0.08 * drawing_window_height
+            box_height = 0.075 * drawing_window_height
         box_width = self.top_right[0] // len(self.convolution)
         print(f'{box_width = }, {box_height = }')
         return box_width, box_height
@@ -616,7 +629,7 @@ class simulation:
             prev_roll = None
         else:
             prev_roll = self.rolls[count - 2]  # - 2 since count starts at 1, but rolls index starts at 0
-        this_roll = roll(sim=self, roll_number=count, partition=self.partition, counter=counter, box_size=box_size, 
+        this_roll = Roll(sim=self, roll_number=count, partition=self.partition, counter=counter, box_size=box_size, 
                          graph=graph, dice=self.number_of_dice, previous_roll=prev_roll)
         self.rolls.append(this_roll)
         return this_roll
@@ -625,18 +638,18 @@ class simulation:
 # ----------------------------------------------------------------------------------------------------------------------
 # Roll - A member of a simulation
 # ----------------------------------------------------------------------------------------------------------------------
-class roll:
-    def __init__(self, sim: simulation, roll_number: int, partition, counter, box_size, graph, dice, previous_roll):
-        self.sim = sim
-        self.roll_number = roll_number
-        self.box_width = box_size[0]
-        self.box_height = box_size[1]
+class Roll:
+    def __init__(self, sim: Simulation, roll_number: int, partition, counter, box_size, graph, dice, previous_roll):
+        self.sim: Simulation = sim
+        self.roll_number: int = roll_number
+        self.box_width: int | float = box_size[0]
+        self.box_height: int | float = box_size[1]
         self.graph: sg.Graph = graph
-        self.dice = dice
-        self.prev_roll = previous_roll
+        self.dice: int = dice  # number of dice to be thrown
+        self.prev_roll: Roll = previous_roll
 
-        outcome = [0] * 6
-        self.individual_outcomes = []
+        outcome: list = [0] * 6
+        self.individual_outcomes: list = []
         for i in range(dice):
             roll = random.random()
             for j in range(7):
@@ -649,17 +662,18 @@ class roll:
                     except TypeError as te:
                         print(f"index out of range, {i = }, {j + 1 = }\n{te}")
                         raise TypeError
-        this_sum = np.dot(outcome, [1, 2, 3, 4, 5, 6])
+        this_sum: int = np.dot(outcome, [1, 2, 3, 4, 5, 6])
 
         try:
             counter[this_sum] += 1
         except KeyError as ke:
             print(f'{this_sum = }\n{counter = }\n\n{ke}')
-
+            raise KeyError
         try:
             self.frequency = counter[this_sum]
         except KeyError as ke:
             print(f'{this_sum = }\n{counter = }\n\n{ke}')
+            raise KeyError
 
         # bottom left corner in pixels
         y_coord = (counter[this_sum] - 1) * self.box_height  

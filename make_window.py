@@ -1,10 +1,10 @@
 from types import ModuleType
-import PySimpleGUI
+import PySimpleGUI as sg
 # from classes import mainframe
 import classes as cl
 
-def update_frame(window: PySimpleGUI.Window, frame: cl.mainframe):
-    f: cl.mainframe = frame
+def update_frame(window: sg.Window, frame: cl.Mainframe):
+    f: cl.Mainframe = frame
     f.window = window
     # initialize convolution graph
     f.con_graph = f.window['convolution graph']
@@ -31,7 +31,7 @@ def do_binds(window, button_images):
         window[('hover', image)].bind('<Leave>', 'EXIT')
 
 
-def Mainframe(sg: PySimpleGUI, images: dict, theme, frame: cl.mainframe):
+def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
     sg.theme(theme)
     screen_width, screen_height = sg.Window.get_screen_size()
 
@@ -139,13 +139,6 @@ def Mainframe(sg: PySimpleGUI, images: dict, theme, frame: cl.mainframe):
     # ----------------------------------------------------------------------------------------------------------------------
     # Graphs 
     # ----------------------------------------------------------------------------------------------------------------------
-
-    # novelty_graph_column = sg.Column(layout=[
-    #         [sg.Stretch(), novelty_graph, sg.Stretch()]
-    #     ], scrollable=True, vertical_scroll_only=True, size=(graph_dimensions['nx'] + 10, desired_window_height), key='novelty column', expand_y=True, expand_x=True, 
-    #     sbar_width=10, sbar_arrow_width=10, sbar_relief='flat', sbar_arrow_color=black if mode == 'dark' else white, sbar_background_color=black if mode == 'dark' else white, sbar_trough_color='gray' if mode == 'light' else None
-    # )
-
     con_dx = frame.con_margins[0][0]
     con_dy = frame.con_margins[1][0]
     con_x = frame.con_graph_size[0]
