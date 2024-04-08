@@ -22,6 +22,7 @@
 #### Selecting Bar
 
 - maybe a class method that takes in a simulation as an argument
+- possibly change colour of rolls if bin is selected
 
 ### Simulation Complete
 
