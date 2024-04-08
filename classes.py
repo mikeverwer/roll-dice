@@ -1,4 +1,5 @@
 import random
+from typing import Self
 import PySimpleGUI as sg
 import numpy as np
 
@@ -55,9 +56,9 @@ class Mainframe:
         self.dice = 1
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 64
-        self.sim_margins: list[list[int]] = [[100, 75], [50, 50]]  #(left, right), (bottom, top)
-        self.sim_graph_size = (996, 10000)
-        self.con_margins: list[list[int]] = [[25, 25], [25, 10]]  #(left, right), (bottom, top)
+        self.sim_margins: list[list[int]] = [[100, 20], [50, 50]]  #(left, right), (bottom, top)
+        self.sim_graph_size = (1000, 10000)
+        self.con_margins: list[list[int]] = [[10, 10], [25, 10]]  #(left, right), (bottom, top)
         self.con_graph_size = (450, 325)
         self.con_graph: sg.Graph = None
         self.sim_graph: sg.Graph = None
@@ -295,11 +296,13 @@ class Convolution:
         self.mean, self.deviation = self.f.mean_and_deviation(self.conv_dist, update=False, dice=self.number_of_dice)
         self.leftmost_bin: int = None
         self.rightmost_bin: int = None
+        self.highest_point: int | float = None
         self.bin_width = 1
         self.scalar = 1
         if self.graph:
             self.make_bars()
         self.selection_box_id = None
+        self.selected_bar_display_ids = []
 
     def create_convoluted_distribution(self, dice=None, get_var=False):
         if dice is None:
@@ -377,18 +380,18 @@ class Convolution:
     def drawing_area(self):
         self.graph.draw_rectangle((0, 0), self.top_right)
         # Draw x-axis tick marks and labels
-        x_tick_diff = len(self.possible_outcomes) // 5  # ensures there are always 6 tick labels
+        x_tick_label_diff = len(self.possible_outcomes) // 5  # ensures there are always 6 tick labels
         for i, bin in enumerate(self.possible_outcomes):
             box_center = self.bin_width * (i + 0.5)
             self.graph.draw_line((box_center, -1), (box_center, -5))   # box_center = self.box_width * (i + 0.5)
-            if i % x_tick_diff == 0:
+            if i % x_tick_label_diff == 0:
                 self.graph.draw_text(f'{bin}', location=(box_center, -10))
  
     
     def find_sizes(self):
         highest_probability = max(self.conv_dist)
-        highest_point = self.top_right[1] * 0.75
-        self.scalar = highest_point / highest_probability
+        self.highest_point = self.top_right[1] - 45
+        self.scalar = self.highest_point / highest_probability
         # print('about to trim')
         # self.trim_outcomes()
         bins = len(self.conv_dist)
@@ -410,68 +413,23 @@ class Convolution:
             bin_number = i + self.number_of_dice
             new_bar = Bar(conv=self, bin=bin_number, prob=probability, size=(self.bin_width, height), coord=x_location)
             self.bins.append(new_bar)
+        tallest_bar = max(self.bins)
+        x = tallest_bar.x_coord + self.bin_width + 1
+        self.graph.draw_line((x, tallest_bar.size[1]), (self.top_right[0], tallest_bar.size[1]), color='#dcdcdc')
+        self.graph.draw_text(text=f"p = {tallest_bar.probability:.4f}", location=(self.top_right[0] - 40, tallest_bar.size[1] + 10), font='_ 11 bold')
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# Bar - A member of a convolution
-# ----------------------------------------------------------------------------------------------------------------------
-class Bar:
-    def __init__(self, conv, bin, prob, size, coord):
-        self.conv: Convolution = conv
-        self.graph = self.conv.graph
-        self.sim_graph = self.conv.f.sim_graph
-        self.bin = bin
-        self.probability = prob
-        self.size = size
-        self.x_coord = coord
-        self.hitbox = self.make_hitbox()  # (top-left, bottom-right)
-        self.draw_bar(*self.hitbox)
-
-    def __repr__(self) -> str:
-        return f"Sum = {self.bin}, probability = {self.probability}"
-    
-    def make_hitbox(self):
-        top_left = (self.x_coord, self.size[1])
-        bottom_right = (self.x_coord + self.size[0], 0)
-        return top_left, bottom_right
-           
-    def draw_bar(self, t_l=None, b_r=None, fill='RoyalBlue4'):
-        if t_l is None:
-            t_l = (0, self.size[1])
-        if b_r is None:
-            b_r = (self.size[0], 0)
-        self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
-
-    def is_hit(self, click: tuple, xoffset: int = 0, yoffset: int = 0, offset: None | int = None):
-        if offset is not None:
-            xoffset = offset
-            yoffset = offset
-        if click:
-            half_length = abs(self.hitbox[0][0] - self.hitbox[1][0]) / 2
-            half_height = abs(self.hitbox[0][1] - self.hitbox[1][1]) / 2
-            center = (self.hitbox[0][0] + half_length, self.hitbox[1][1] + half_height)
-            dx = abs(click[0] - center[0])
-            dy = abs(click[1] - center[1])
-            if dx - half_length <= xoffset and dy - half_height <= yoffset:
-                return True
-            else:
-                return False
+    def delete_ids(self, id_list=None):
+        if id_list is None:
+            for id in self.selected_bar_display_ids:
+                self.graph.delete_figure(id)
+                self.selected_bar_display_ids = []
         else:
-            return False
-    
-    def display(self):
-        if self.conv.f.sim and False:  # turned off for now
-            self.conv.f.convolution_display_ids = self.conv.f.sim.delete_ids(self.conv.f.convolution_display_ids)
-            self.conv.f.convolution_selection_lines = self.conv.f.sim.delete_ids(self.conv.f.convolution_selection_lines)
-            # Draw bin outline on sim graph
-            x1 = (self.bin - self.conv.number_of_dice) * self.conv.f.sim.box_width
-            x2 = (self.bin - self.conv.number_of_dice + 1) * self.conv.f.sim.box_width
-            y = self.conv.f.sim.top_right[1]
-            self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x1, y), color='#dcdcdc'))
-            self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x2, y), color='#dcdcdc'))
-
-        return
-    
+            for id in id_list:
+                self.graph.delete_figure(id)
+            return []    
+        
+  
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Die Face - used by the simulation to display each rolled die on the left side
@@ -546,6 +504,7 @@ class Simulation:
         self.die_faces: list[DieFace] = None
         self.draw_dice()
         self.display_ids: list = []
+        self.column_outline_ids = []
         self.displaying_roll = False
         self.trial_number = 1
 
@@ -572,6 +531,27 @@ class Simulation:
             self.graph.draw_line((box_center, -1), (box_center, -10))   # box_center = self.box_width * (i + 0.5)
             if i % x_tick_diff == 0:
                 self.graph.draw_text(f'{bin}', location=(box_center, -15))
+
+    
+    def draw_column_outlines(self, bin_number):
+        print('this runs first')
+        self.column_outline_ids = self.delete_ids(self.column_outline_ids)
+        print('this runs next')
+        x1 = (bin_number) * self.box_width
+        x2 = (bin_number + 1) * self.box_width
+        y = self.top_right[1]
+        self.column_outline_ids.append(self.graph.draw_line((x1, 0), (x1, y), color='#dcdcdc'))
+        self.column_outline_ids.append(self.graph.draw_line((x2, 0), (x2, y), color='#dcdcdc'))
+
+        # self.conv.f.convolution_display_ids = self.conv.f.sim.delete_ids(self.conv.f.convolution_display_ids)
+        #         self.conv.f.convolution_selection_lines = self.conv.f.sim.delete_ids(self.conv.f.convolution_selection_lines)
+        #         # Draw bin outline on sim graph
+        #         x1 = (self.bin - self.conv.number_of_dice) * self.conv.f.sim.box_width
+        #         x2 = (self.bin - self.conv.number_of_dice + 1) * self.conv.f.sim.box_width
+        #         y = self.conv.f.sim.top_right[1]
+        #         self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x1, y), color='#dcdcdc'))
+        #         self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x2, y), color='#dcdcdc'))
+
     
     def delete_ids(self, id_list=None):
         if id_list is None:
@@ -589,6 +569,7 @@ class Simulation:
         for dice in range(self.number_of_dice):
             new_die_face = DieFace(graph=self.graph, images=self.f.images, stack_position=dice)
             self.die_faces.append(new_die_face)
+
     
     def find_box_size(self):
         # should be a smooth function from 3px to x% of drawing area
@@ -608,6 +589,7 @@ class Simulation:
         box_width = self.top_right[0] // len(self.convolution)
         print(f'{box_width = }, {box_height = }')
         return box_width, box_height
+    
 
     def make_partition(self, distribution=None):
         if distribution is None:
@@ -618,6 +600,7 @@ class Simulation:
             total += distribution[i]
             partition.append(total)
         return partition
+    
     
     def roll_dice(self, count:int = 1):
         counter = self.outcome_counter
@@ -729,7 +712,8 @@ class Roll:
         self.sim.delete_ids()
         self.sim.display_ids.append(self.graph.draw_text(self.sum, location=(-62, 0), color='black', font='_ 16 bold'))
         self.sim.display_ids.append(self.graph.draw_line((-40, 20), (-84, 20)))
-        self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-45, -30), color='magenta', font='_ 16 bold'))
+        self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-84, -35),
+                                                         text_location=sg.TEXT_LOCATION_LEFT, color='magenta', font='_ 16 bold'))
 
         # self.graph.draw_line((-40, 0), (-84, 0))
         # x=-73, y=35, y_sep=40
@@ -738,3 +722,80 @@ class Roll:
     def __repr__(self) -> str:
         return f"Roll: {self.roll_number}\n  Outcome = {self.sum}, Occurrence = {self.frequency}  \n{' ' * 18}1  2  3  4  5  6\n  Dice Outcomes: {self.outcome}\n  {self.individual_outcomes = }"
 
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Bar - A member of a convolution, uses the simulation when a bar is selected
+# ----------------------------------------------------------------------------------------------------------------------
+class Bar:
+    def __init__(self, conv, bin, prob, size, coord):
+        self.conv: Convolution = conv
+        self.graph = self.conv.graph
+        self.sim_graph = self.conv.f.sim_graph
+        self.bin = bin
+        self.probability = prob
+        self.size = size
+        self.x_coord = coord
+        self.hitbox = self.make_hitbox()  # (top-left, bottom-right)
+        self.draw_bar(*self.hitbox)
+
+    def __repr__(self) -> str:
+        return f"Sum = {self.bin}, probability = {self.probability}"
+    
+    def __eq__(self, other: Self) -> bool:
+        return self.probability == other.probability and self.bin == other.bin
+    
+    def __lt__(self, other: Self) -> bool:
+        return self.probability < other.probability and self.bin < other.bin
+    
+    def make_hitbox(self):
+        top_left = (self.x_coord, self.size[1])
+        bottom_right = (self.x_coord + self.size[0], 0)
+        return top_left, bottom_right
+           
+    def draw_bar(self, t_l=None, b_r=None, fill='RoyalBlue4'):
+        if t_l is None:
+            t_l = (0, self.size[1])
+        if b_r is None:
+            b_r = (self.size[0], 0)
+        self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
+
+    def is_hit(self, click: tuple, xoffset: int = 0, yoffset: int = 0, offset: None | int = None):
+        if offset is not None:
+            xoffset = offset
+            yoffset = offset
+        if click:
+            half_length = abs(self.hitbox[0][0] - self.hitbox[1][0]) / 2
+            half_height = abs(self.hitbox[0][1] - self.hitbox[1][1]) / 2
+            center = (self.hitbox[0][0] + half_length, self.hitbox[1][1] + half_height)
+            dx = abs(click[0] - center[0])
+            dy = abs(click[1] - center[1])
+            if dx - half_length <= xoffset and dy - half_height <= yoffset:
+                return True
+            else:
+                return False
+        else:
+            return False
+    
+    def display(self):
+        self.conv.delete_ids()
+        self.conv.selected_bar_display_ids.append(self.graph.draw_text(
+            text=f"Sum: {self.bin}  |  p = {self.probability:.4f}", location=(10, self.conv.top_right[1] - 25), 
+            color='magenta', font='_ 14 bold', text_location=sg.TEXT_LOCATION_LEFT
+        ))
+        if self.conv.f.sim:  # turned off for now
+            sim: Simulation = self.conv.f.sim
+            # self.conv.f.sim.draw_column_outlines(sim=sim, bin_number=self.bin - self.conv.number_of_dice)
+
+
+            if False:
+                self.conv.f.convolution_display_ids = self.conv.f.sim.delete_ids(self.conv.f.convolution_display_ids)
+                self.conv.f.convolution_selection_lines = self.conv.f.sim.delete_ids(self.conv.f.convolution_selection_lines)
+                # Draw bin outline on sim graph
+                x1 = (self.bin - self.conv.number_of_dice) * self.conv.f.sim.box_width
+                x2 = (self.bin - self.conv.number_of_dice + 1) * self.conv.f.sim.box_width
+                y = self.conv.f.sim.top_right[1]
+                self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x1, y), color='#dcdcdc'))
+                self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x2, y), color='#dcdcdc'))
+
+        return
