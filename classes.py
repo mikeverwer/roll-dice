@@ -693,13 +693,10 @@ class Roll:
 
         try:
             counter[this_sum] += 1
-        except KeyError as ke:
-            print(f'{this_sum = }\n{counter = }\n\n{ke}')
-            raise KeyError
-        try:
             self.frequency = counter[this_sum]
         except KeyError as ke:
             print(f'{this_sum = }\n{counter = }\n\n{ke}')
+            
             raise KeyError
 
         # bottom left corner in pixels
