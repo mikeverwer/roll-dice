@@ -34,4 +34,3 @@
 
 - fix "fair" die being unfair
 - fix mean and deviation after randomizing
-- changing the sliders should reset the preset combo to be blank

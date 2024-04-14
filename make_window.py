@@ -68,7 +68,20 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
                 sg.Button('Randomize', button_color='cyan'), sg.Push()],
                 [sg.Text('', font='Courier 1')],
             ]
+    
+    sim_input_column_layout = [
+        [sg.Text('Number of rolls: ', p=((4, 0), (0, 4))), sg.Input(s=9, default_text=100, k='rolls', p=((0, 0), (0, 4)))],
+        [sg.Push(), 
+        sg.Button('Pause', button_color='#1b1b1b on darkgrey', font='Helvetica 12 bold', size=(8, 1), border_width=2),
+        sg.Button('Roll!', k='go', border_width=2, size=(8, 1), bind_return_key=True, 
+                font='Helvetica 12 bold', button_color='white on green'),
+        sg.Push()],
+    ]
 
+    # sim_inter_layout = [
+    #     [sg.Column(layout=sim_input_column_layout, p=((8, 8), (8, 8))),
+    #     ]
+    # ]
 
     grid_layout = [
         [sg.Text('The Central Limit Theorem', font="Helvetica 26 bold")],
@@ -96,7 +109,8 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
                     [sg.Button(image_data=frame.images.down, key='down')]
                 ])]
             ], p=((0, 0), (8, 8))
-         )
+         ),
+         sg.Frame(title=None, layout=sim_input_column_layout, p=(4, 4), relief='raised')
         ]
         
     ]
@@ -113,27 +127,6 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
                       reroute_stderr=True,
                       echo_stdout_stderr=True, autoscroll=True, auto_refresh=True, key='log'),
          sg.Push()]
-    ]
-
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Simulation Interface
-    # ----------------------------------------------------------------------------------------------------------------------
-    sim_input_column_layout = [
-        [sg.Text('Number of rolls: ', p=((4, 0), (0, 4))), sg.Input(s=9, default_text=100, k='rolls', p=((0, 0), (0, 4)))],
-        [sg.Push(), 
-        sg.Button('Pause', button_color='#1b1b1b on darkgrey', font='Helvetica 12 bold', size=(8, 1), border_width=2),
-        sg.Button('Roll!', k='go', border_width=2, size=(8, 1), bind_return_key=True, 
-                font='Helvetica 12 bold', button_color='white on green'),
-        sg.Push()],
-    ]
-    
-    sim_display_column_layout = [
-        [sg.Image(data=None, k='dice gif'), sg.Text('test')]
-    ]
-
-    sim_inter_layout = [
-        [sg.Column(layout=sim_input_column_layout, p=((8, 8), (8, 8))),
-        ]
     ]
 
     # ----------------------------------------------------------------------------------------------------------------------
@@ -158,7 +151,7 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
                   expand_y=True, enable_events=True)]
     ]
 
-    smallest_height = 630
+    smallest_height = 730
     sim_column = [
         [sg.Stretch(), 
          sg.Column(layout=sim_layout, scrollable=True, vertical_scroll_only=True, size=(frame.sim_graph_size[0], smallest_height), key='sim column',
@@ -182,10 +175,10 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
          sg.Push(), sg.Image(data=images.menubar1_r), sg.Image(data=images.author, enable_events=True, key=('hover', 'author'))]
     ]
 
-    sim_layout += sim_inter_layout
+    # sim_layout += sim_inter_layout
 
     grid_layout += [[sg.TabGroup([[sg.Tab(frame.convolution_title, layout=convolution_graph_layout, k='dist tab'),
-                                   sg.Tab('    Log    ', logging_layout, k='log tab')
+                                   sg.Tab('  Log  ', logging_layout, k='log tab')
                                    ]],
                                 font='Helvetica 12 bold', focus_color='white', border_width=0),
     ]]
