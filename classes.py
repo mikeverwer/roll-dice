@@ -552,7 +552,6 @@ class Simulation:
 
     
     def draw_column_outlines(self, bin_number):
-        print('this runs next')
         self.column_outline_ids = self.delete_ids(self.column_outline_ids)
         x1 = (bin_number) * self.box_width
         x2 = (bin_number + 1) * self.box_width
@@ -821,7 +820,6 @@ class Bar:
         if self.conv.f.sim:
             sim: Simulation = self.conv.f.sim
             if len(sim.bin_dictionary) == len(self.conv.possible_outcomes):
-                print('this runs first')    
                 previous_bin = sim.selected_bin
                 sim.selected_bin = self.bin
                 sim.select_bin(previous_bin)
