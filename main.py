@@ -125,6 +125,8 @@ def main():
     sg.theme('Default1')
     mf = cl.Mainframe(images)  # MainFrame object, see classes.py
     window = make.Mainframe_func(sg, images, theme='Default1', frame=mf)
+    size = mf.window.size
+    mf.resize_graphs()
 
     fig_canvas_matlab_convolve = None
     fig_canvas_agg_simulated = None
@@ -179,6 +181,12 @@ def main():
                     webbrowser.open('https://mikeverwer.github.io/')
                 elif button_clicked == 'minimize':
                     pass
+
+        elif event == 'resize':
+            if size != mf.window.size:
+                mf.resize_graphs()
+                size = mf.window.size
+                print(size)
 
         elif event == 'SaveSettings':
             filename = sg.popup_get_file('Save Settings', save_as=True, no_window=True)

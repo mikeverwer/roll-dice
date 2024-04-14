@@ -6,6 +6,9 @@ import classes as cl
 def update_frame(window: sg.Window, frame: cl.Mainframe):
     f: cl.Mainframe = frame
     f.window = window
+    f.window.set_min_size((810, 765))
+    screen_width, screen_height = sg.Window.get_screen_size()
+    f.window.size = ((0.85 * screen_width, 0.75 * screen_height))
     # initialize convolution graph
     f.con_graph = f.window['convolution graph']
     f.convolution.graph = f.con_graph
@@ -23,17 +26,23 @@ def update_frame(window: sg.Window, frame: cl.Mainframe):
 
 
 def do_binds(window, button_images):
-    """
-    This is magic code that enables the mouseover highlighting to work.
-    """
-    for image in button_images:
+    for image in button_images:  # key for image button must be tuple with ('hover', ...)
         window[('hover', image)].bind('<Enter>', 'ENTER')
         window[('hover', image)].bind('<Leave>', 'EXIT')
+    window.bind("<Configure>", "resize")
 
 
 def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
     sg.theme(theme)
+
+    # ----------------------------------------------------------------------------------------------------------------------
+    # Screen and Graph Sizing
+    # ----------------------------------------------------------------------------------------------------------------------
     screen_width, screen_height = sg.Window.get_screen_size()
+    frame.sim_graph_size = (screen_width - 500, 10_000)
+    frame.con_graph_size = (450, 325)
+    smallest_height = screen_height - 105
+
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Layout
@@ -85,6 +94,7 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
 
     grid_layout = [
         [sg.Text('The Central Limit Theorem', font="Helvetica 26 bold")],
+        [sg.Stretch()],
         [sg.Frame('Dice Distribution  |  Click on a die face to lock its value', layout=[
                 [sg.Push(), sg.Text('Use the sliders to set a probability distribution for the dice.', font='helvetica 10', p=((0, 0), (2, 2))), sg.Push()],
                 [sg.Push(),
@@ -151,7 +161,6 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
                   expand_y=True, enable_events=True)]
     ]
 
-    smallest_height = 730
     sim_column = [
         [sg.Stretch(), 
          sg.Column(layout=sim_layout, scrollable=True, vertical_scroll_only=True, size=(frame.sim_graph_size[0], smallest_height), key='sim column',
@@ -180,22 +189,24 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
     grid_layout += [[sg.TabGroup([[sg.Tab(frame.convolution_title, layout=convolution_graph_layout, k='dist tab'),
                                    sg.Tab('  Log  ', logging_layout, k='log tab')
                                    ]],
-                                font='Helvetica 12 bold', focus_color='white', border_width=0),
+                                font='Helvetica 12 bold', focus_color='white', border_width=0, ),
     ]]
 
     layout += menu_def
 
     layout += [
-        [sg.Column(grid_layout, element_justification='center', vertical_alignment='top'), sg.Column(sim_layout)],
+        [sg.Column(grid_layout, element_justification='center', vertical_alignment='center'), sg.Column(sim_layout)],
     ]
+
+    layout[-1].append(sg.Sizegrip())
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Initialize Window
     # ----------------------------------------------------------------------------------------------------------------------
-
+    #  min size (810, 765)
     window = sg.Window(
         'CLT Demonstration', layout, grab_anywhere=True, element_padding=0, margins=(0, 0), finalize=True, font='helvetica 10 bold', 
-        border_depth=0, icon=frame.images.lock6)  # was (60, 1)
+        border_depth=0, icon=frame.images.lock6, resizable=True, location=(0, 0), size=(int(0.85 * screen_width), int(0.75 * screen_height)))  # was (60, 1)
     do_binds(window, hoverable_buttons)
     update_frame(window, frame)
     window['sim column'].Widget.canvas.yview_moveto(1.0)

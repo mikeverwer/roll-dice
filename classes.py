@@ -71,6 +71,15 @@ class Mainframe:
         self.convolution_display_ids = []
         self.convolution_selection_lines = []
         print(f'Complete!\n')
+
+    
+    def resize_graphs(self):
+        window_size = self.window.size
+        self.sim_graph_size = (window_size[0] - 475, 10_000)
+        # self.con_graph_size = (450, window_size[1] - 500)
+        # self.convolution.top_right = (self.con_graph_size[0] - sum(self.con_margins[0]), self.con_graph_size[1] - sum(self.con_margins[1]))
+        if self.sim:
+            self.sim.top_right = (self.sim_graph_size[0] - sum(self.sim_margins[0]), self.sim_graph_size[1] - sum(self.sim_margins[1]))
         
 
     def random_distribution(self, get_var=False):
@@ -737,7 +746,7 @@ class Roll:
         self.sim.delete_ids()
         self.sim.display_ids.append(self.graph.draw_text(self.sum, location=(-62, 0), color='black', font='_ 16 bold'))
         self.sim.display_ids.append(self.graph.draw_line((-40, 20), (-84, 20)))
-        self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-84, -35),
+        self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-84, -25),
                                                          text_location=sg.TEXT_LOCATION_LEFT, color='magenta', font='_ 16 bold'))
 
         # self.graph.draw_line((-40, 0), (-84, 0))
