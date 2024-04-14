@@ -46,10 +46,7 @@ class image_data:
 
 images = image_data()
 # ----------------------------------------------------------------------------------------------------------------------
-# Functions for calculations
-# ----------------------------------------------------------------------------------------------------------------------
-# ----------------------------------------------------------------------------------------------------------------------
-# Making plots
+# Making MatLab plots
 # ----------------------------------------------------------------------------------------------------------------------
 
 def create_histogram(outcomes, die_rolled, trials):
@@ -203,7 +200,6 @@ def main():
             set_to_preset = mf.values[event]
             mf.set_sliders_to(mf.presets[set_to_preset], reset_locks=True)
 
-
         elif event == 'add preset' and mf.values['preset'] != '':
             mf.add_preset(mf.values['preset'])
 
@@ -252,7 +248,6 @@ def main():
                 )
             except TypeError:
                 mf.convolution.selection_box_id = None
-
         
         elif event == 'simulation graph' and mf.sim:
             try:
@@ -267,7 +262,6 @@ def main():
                 mf.sim.displaying_roll = False
                 mf.sim.delete_ids()
 
-
         
         ######################################
         # Animation
@@ -280,6 +274,7 @@ def main():
                 mf.simulate = False
                 # mf.window['dice gif'].update(data=None)
 
+    # end of event loop
     mf.window.close()
 
 

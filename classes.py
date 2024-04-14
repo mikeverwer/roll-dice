@@ -282,6 +282,8 @@ class Convolution:
         if frame.con_graph is None:
             print('Making Convolution', end='... ')
         self.f = frame
+        if frame.sim:
+            self.f.sim.deselect_all_bins()
         self.bins: list[Bar] = []
         self.die_dist = frame.die_distribution
         self.graph = frame.con_graph
@@ -302,6 +304,7 @@ class Convolution:
         if self.graph:
             self.make_bars()
         self.selection_box_id = None
+        self.current_selection = None
         self.selected_bar_display_ids = []
 
     def create_convoluted_distribution(self, dice=None, get_var=False):
@@ -490,10 +493,11 @@ class Simulation:
         self.f.window['sim column'].Widget.canvas.yview_moveto(1.0)
         self.selection_box_id = None
         self.partition = self.make_partition()
-        self.possible_outcomes = list(range(self.number_of_dice, (6 * self.number_of_dice) + 1))
+        self.possible_outcomes = self.f.convolution.possible_outcomes
         self.outcome_counter: dict[int: int] = {}
         self.rolls: list[Roll] = []
-        self.convolution: list[float] = self.f.convolution.conv_dist       
+        self.bin_dictionary: dict[int, list[Roll]] = {outcome: [] for outcome in self.possible_outcomes}  # for bin, outcomes in self.bin_dictionary.items(): ...
+        self.convolution: list[float] = self.f.convolution.conv_dist 
         self.outcome_counter = {outcome: 0 for outcome in self.possible_outcomes}
         # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
         # Current Drawing Area, (x, y) = (1000, 400) ==> (0, 0) to (775, 300)
@@ -507,6 +511,10 @@ class Simulation:
         self.column_outline_ids = []
         self.displaying_roll = False
         self.trial_number = 1
+        self.selected_bin = self.f.convolution.current_selection
+        if self.selected_bin:
+            print(self.selected_bin)
+            self.draw_column_outlines(self.selected_bin - self.number_of_dice)
 
     def drawing_area(self):
         self.graph.draw_rectangle((0,0), self.top_right)
@@ -534,14 +542,13 @@ class Simulation:
 
     
     def draw_column_outlines(self, bin_number):
-        print('this runs first')
-        self.column_outline_ids = self.delete_ids(self.column_outline_ids)
         print('this runs next')
+        self.column_outline_ids = self.delete_ids(self.column_outline_ids)
         x1 = (bin_number) * self.box_width
         x2 = (bin_number + 1) * self.box_width
         y = self.top_right[1]
-        self.column_outline_ids.append(self.graph.draw_line((x1, 0), (x1, y), color='#dcdcdc'))
-        self.column_outline_ids.append(self.graph.draw_line((x2, 0), (x2, y), color='#dcdcdc'))
+        self.column_outline_ids.append(self.graph.draw_line((x1, 0), (x1, y), color='magenta'))
+        self.column_outline_ids.append(self.graph.draw_line((x2, 0), (x2, y), color='magenta'))
 
         # self.conv.f.convolution_display_ids = self.conv.f.sim.delete_ids(self.conv.f.convolution_display_ids)
         #         self.conv.f.convolution_selection_lines = self.conv.f.sim.delete_ids(self.conv.f.convolution_selection_lines)
@@ -552,7 +559,24 @@ class Simulation:
         #         self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x1, y), color='#dcdcdc'))
         #         self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x2, y), color='#dcdcdc'))
 
+
+    def select_bin(self, previous_bin):
+        if previous_bin:
+            for roll in self.bin_dictionary[previous_bin]:
+                self.graph.Widget.itemconfig(roll.id, fill='cyan')
+        for roll in self.bin_dictionary[self.selected_bin]:
+            self.graph.Widget.itemconfig(roll.id, fill='Royal Blue')
+        self.graph.Widget.itemconfig(self.rolls[-1], fill='green')  # ensure the final roll is still green
     
+    def deselect_all_bins(self):
+        if self.selected_bin:
+            self.selected_bin = None
+            for roll in self.rolls:
+                self.graph.Widget.itemconfig(roll.id, fill='cyan')
+            self.graph.Widget.itemconfig(self.rolls[-1], fill='green')  # ensure the final roll is still green
+            self.column_outline_ids = self.delete_ids(self.column_outline_ids)
+
+
     def delete_ids(self, id_list=None):
         if id_list is None:
             for id in self.display_ids:
@@ -606,15 +630,14 @@ class Simulation:
         counter = self.outcome_counter
         # b64_image_data = getattr(self.f.images, f'die{(count % 6) + 1}')
         # self.f.window['dice gif'].update(data=b64_image_data)
-        box_size = (self.box_width, self.box_height)
-        graph = self.graph
         if count == 1:
             prev_roll = None
         else:
             prev_roll = self.rolls[count - 2]  # - 2 since count starts at 1, but rolls index starts at 0
-        this_roll = Roll(sim=self, roll_number=count, partition=self.partition, counter=counter, box_size=box_size, 
-                         graph=graph, dice=self.number_of_dice, previous_roll=prev_roll)
+        this_roll = Roll(sim=self, roll_number=count, partition=self.partition, counter=counter, box_size=(self.box_width, self.box_height), 
+                         graph=self.graph, dice=self.number_of_dice, previous_roll=prev_roll)
         self.rolls.append(this_roll)
+        self.bin_dictionary[int(this_roll.sum)].append(this_roll)
         return this_roll
 
 
@@ -684,7 +707,8 @@ class Roll:
             b_r = (self.box_width, 0)
         if self.prev_roll:
             previous_box_id = self.prev_roll.id
-            self.graph.TKCanvas.itemconfig(previous_box_id, fill='cyan')
+            box_color = 'Royal Blue' if self.prev_roll.sum == self.sim.selected_bin else 'cyan'
+            self.graph.TKCanvas.itemconfig(previous_box_id, fill=box_color)
         self.id = self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
 
     
@@ -778,14 +802,22 @@ class Bar:
             return False
     
     def display(self):
+        self.conv.current_selection = self.bin
         self.conv.delete_ids()
         self.conv.selected_bar_display_ids.append(self.graph.draw_text(
             text=f"Sum: {self.bin}  |  p = {self.probability:.4f}", location=(10, self.conv.top_right[1] - 25), 
             color='magenta', font='_ 14 bold', text_location=sg.TEXT_LOCATION_LEFT
         ))
-        if self.conv.f.sim:  # turned off for now
+        if self.conv.f.sim:
             sim: Simulation = self.conv.f.sim
-            # self.conv.f.sim.draw_column_outlines(sim=sim, bin_number=self.bin - self.conv.number_of_dice)
+            if len(sim.bin_dictionary) == len(self.conv.possible_outcomes):
+                print('this runs first')    
+                previous_bin = sim.selected_bin
+                sim.selected_bin = self.bin
+                sim.select_bin(previous_bin)
+                sim.draw_column_outlines(bin_number=self.bin - self.conv.number_of_dice)
+            else:
+                sim.deselect_all_bins()
 
 
             if False:
