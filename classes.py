@@ -611,6 +611,8 @@ class Simulation:
         for dice in range(self.number_of_dice):
             new_die_face = DieFace(graph=self.graph, images=self.f.images, stack_position=dice)
             self.die_faces.append(new_die_face)
+        # roll info separator
+        self.graph.draw_line((-40, 20), (-84, 20))
 
     
     def find_box_size(self):
@@ -697,6 +699,7 @@ class Roll:
                         raise TypeError
         this_sum: int = np.dot(outcome, [1, 2, 3, 4, 5, 6])
 
+
         try:
             counter[this_sum] += 1
         except KeyError as ke:
@@ -718,6 +721,7 @@ class Roll:
         self.hitbox = self.make_hitbox()
         self.id: int
         self.draw_roll(*self.hitbox)
+        self.display(set_faces=False)
 
 
     def make_hitbox(self):
@@ -757,12 +761,13 @@ class Roll:
             return False
         
     
-    def display(self):
-        for i, outcome in enumerate(self.individual_outcomes):
-            self.sim.die_faces[i].set_image(outcome)
+    def display(self, set_faces=True):
+        if set_faces:
+            for i, outcome in enumerate(self.individual_outcomes):
+                self.sim.die_faces[i].set_image(outcome)
         self.sim.delete_ids()
-        self.sim.display_ids.append(self.graph.draw_text(self.sum, location=(-62, 0), color='black', font='_ 18 bold'))
-        self.sim.display_ids.append(self.graph.draw_line((-40, 20), (-84, 20)))
+        self.sim.display_ids.append(self.graph.draw_text(self.sum, location=(-62, 0), color='black', font='_ 16 bold'))
+        # self.sim.display_ids.append(self.graph.draw_line((-40, 20), (-84, 20)))
         self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-84, -25),
                                                          text_location=sg.TEXT_LOCATION_LEFT, color='magenta', font='_ 16 bold'))
 
