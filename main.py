@@ -107,7 +107,7 @@ def clear_canvas(canvas_agg):
 # ----------------------------------------------------------------------------------------------------------------------
 
 def error_popup(error, message, duration=5):
-    sg.popup_quick_message(f'\n{error}:\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=duration, grab_anywhere=True)
+    sg.popup_quick_message(f'\n{error}\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=duration, grab_anywhere=True)
 
 
 ###########################################################################################################################

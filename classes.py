@@ -360,7 +360,7 @@ class Convolution:
         feasible_outcomes = self.possible_outcomes
         distribution = self.conv_dist
         
-        tol = 1
+        tol = 0.5
         found = False
         for i, x in enumerate(distribution):
             if not found:
@@ -413,7 +413,7 @@ class Convolution:
             probability = x
             height = x * self.scalar
             x_location = i * self.bin_width
-            bin_number = i + self.number_of_dice
+            bin_number = i + self.possible_outcomes[0]
             new_bar = Bar(conv=self, bin=bin_number, prob=probability, size=(self.bin_width, height), coord=x_location)
             self.bins.append(new_bar)
         tallest_bar = max(self.bins)
@@ -531,7 +531,7 @@ class Simulation:
         self.trial_number = 1
         self.selected_bin = self.f.convolution.current_selection
         if self.selected_bin:
-            self.draw_column_outlines(self.selected_bin - self.number_of_dice)
+            self.draw_column_outlines(self.selected_bin - self.possible_outcomes[0])
 
 
     def drawing_area(self):
@@ -694,22 +694,21 @@ class Roll:
         try:
             counter[this_sum] += 1
             self.frequency = counter[this_sum]
+            # bottom left corner in pixels
+            y_coord = (counter[this_sum] - 1) * self.box_height  
+            x_coord = (this_sum - self.sim.possible_outcomes[0]) * self.box_width
+            self.outcome = outcome
+            self.sum = this_sum  # X-coord in grid squares
+            self.px_coord = (x_coord, y_coord)
+            self.grid_coord = (self.sum - dice, self.frequency - 1)
+            self.hitbox = self.make_hitbox()
+            self.id: int
+            self.draw_roll(*self.hitbox)
+            if not self.sim.displaying_roll:
+                self.display(set_faces=False)
         except KeyError as ke:
             print(f'{this_sum = }\n{counter = }\n\n{ke}')
-            
-            raise KeyError
-
-        # bottom left corner in pixels
-        y_coord = (counter[this_sum] - 1) * self.box_height  
-        x_coord = (this_sum - self.sim.possible_outcomes[0]) * self.box_width
-        self.outcome = outcome
-        self.sum = this_sum  # X-coord in grid squares
-        self.px_coord = (x_coord, y_coord)
-        self.grid_coord = (self.sum - dice, self.frequency - 1)
-        self.hitbox = self.make_hitbox()
-        self.id: int
-        self.draw_roll(*self.hitbox)
-        self.display(set_faces=False)
+            sg.popup_quick_message(f'Outlier encountered: {this_sum}', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=1, grab_anywhere=True)
 
 
     def make_hitbox(self):
@@ -845,7 +844,7 @@ class Bar:
                 previous_bin = sim.selected_bin
                 sim.selected_bin = self.bin
                 sim.select_bin(previous_bin)
-                sim.draw_column_outlines(bin_number=self.bin - self.conv.number_of_dice)
+                sim.draw_column_outlines(bin_number=self.bin - self.conv.possible_outcomes[0])
             else:
                 sim.deselect_all_bins()
 
