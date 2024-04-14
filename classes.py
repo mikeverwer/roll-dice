@@ -359,61 +359,25 @@ class Convolution:
     def trim_outcomes(self):
         feasible_outcomes = self.possible_outcomes
         distribution = self.conv_dist
-        number_of_bins = len(distribution)
         
-        # feasible outcomes, within 3.5 st. dev.'s from the mean
-        # outcomes = list(range(int(mean - (3.5 * deviation)), int(mean + (3.5 * deviation))))  
-
-        # Check: values in distribution[int(mean - (5.5 * deviation))] and distribution[int(mean + (5.5 * deviation))] ~ 0?
-        #        Need to handle boundary checking.
-        # Trim outcomes and distribution accordingly
-
-        left_border_index = int(self.mean - (5.5 * self.deviation))
-        left_border_index = 0 if left_border_index < 0 else left_border_index
-        right_border_index = int(self.mean + (5.5 * self.deviation))
-        right_border_index = len(feasible_outcomes) - 1 if right_border_index >= len(feasible_outcomes) else right_border_index
         tol = 1
-        left_bin_height = distribution[left_border_index] * self.scalar
-        right_bin_height = distribution[right_border_index]
-        
+        found = False
         for i, x in enumerate(distribution):
-            found = False
             if not found:
-                if x * self.scalar > 1:
+                if x * self.scalar > tol:
                     left_border_index = i
                     found = True
         
+        found = False
         for i, x in enumerate(reversed(distribution)):
-            found = False
             if not found:
-                if x * self.scalar > 1:
-                    right_border_index = len(distribution) - i
+                if x * self.scalar > tol:
+                    right_border_index = len(distribution) - i - 1
                     found = True
-                    
-        print(f"{left_border_index = }, {right_border_index = }")
         
-        # if left_bin_height < tol and distribution[right_border_index] > tol:
-        #     distribution = distribution[left_border_index:]
-        #     feasible_outcomes = feasible_outcomes[left_border_index:]
-        # elif distribution[left_border_index] > tol and distribution[right_border_index] < tol and right_border_index < len(feasible_outcomes) - 1:
-        #     distribution = distribution[:right_border_index]
-        #     feasible_outcomes = feasible_outcomes[:right_border_index]
-        #     print('trimming RIGHT border only')
-        #     print('new outcomes:')
-        #     print(f"{len(feasible_outcomes) = }, {feasible_outcomes[0] = }, {feasible_outcomes[-1] = }\n")
-        # elif distribution[left_border_index] < tol and distribution[right_border_index] < tol:
-        #     distribution = distribution[left_border_index:right_border_index]
-        #     feasible_outcomes = feasible_outcomes[left_border_index:right_border_index]
-        #     print('trimming BOTH borders')
-        #     print('new outcomes:')
-        #     print(f"{len(feasible_outcomes) = }, {feasible_outcomes[0] = }, {feasible_outcomes[-1] = }\n")
-        # else:
-        #     print('No trim needed')
-        
-        feasible_outcomes = feasible_outcomes[left_border_index : right_border_index]
+        feasible_outcomes = feasible_outcomes[left_border_index : right_border_index + 1]
         self.possible_outcomes = feasible_outcomes
-        distribution = distribution[left_border_index : right_border_index]
-        self.conv_dist = distribution
+        self.conv_dist = distribution[left_border_index : right_border_index + 1]
         return
     
     def drawing_area(self):
@@ -431,8 +395,8 @@ class Convolution:
         highest_probability = max(self.conv_dist)
         self.highest_point = self.top_right[1] - 45
         self.scalar = self.highest_point / highest_probability
-        # print('about to trim')
-        # self.trim_outcomes()
+        print('about to trim')
+        self.trim_outcomes()
         bins = len(self.conv_dist)
         self.bin_width = self.top_right[0] // bins
     
@@ -746,7 +710,7 @@ class Roll:
 
         # bottom left corner in pixels
         y_coord = (counter[this_sum] - 1) * self.box_height  
-        x_coord = (this_sum - dice) * self.box_width
+        x_coord = (this_sum - self.sim.possible_outcomes[0]) * self.box_width
         self.outcome = outcome
         self.sum = this_sum  # X-coord in grid squares
         self.px_coord = (x_coord, y_coord)
@@ -797,7 +761,7 @@ class Roll:
         for i, outcome in enumerate(self.individual_outcomes):
             self.sim.die_faces[i].set_image(outcome)
         self.sim.delete_ids()
-        self.sim.display_ids.append(self.graph.draw_text(self.sum, location=(-62, 0), color='black', font='_ 16 bold'))
+        self.sim.display_ids.append(self.graph.draw_text(self.sum, location=(-62, 0), color='black', font='_ 18 bold'))
         self.sim.display_ids.append(self.graph.draw_line((-40, 20), (-84, 20)))
         self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-84, -25),
                                                          text_location=sg.TEXT_LOCATION_LEFT, color='magenta', font='_ 16 bold'))
