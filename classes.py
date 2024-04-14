@@ -19,7 +19,16 @@ Note: A `simulation` requires a `mainframe` as an initializing variable.
 """
 
 # ----------------------------------------------------------------------------------------------------------------------
-# EventHandler - A class that handles the events from the event loop in main
+# 8888888888                           888         888    888                        888 888                  
+# 888                                  888         888    888                        888 888                  
+# 888                                  888         888    888                        888 888                  
+# 8888888   888  888  .d88b.  88888b.  888888      8888888888  8888b.  88888b.   .d88888 888  .d88b.  888d888 
+# 888       888  888 d8P  Y8b 888 "88b 888         888    888     "88b 888 "88b d88" 888 888 d8P  Y8b 888P"   
+# 888       Y88  88P 88888888 888  888 888         888    888 .d888888 888  888 888  888 888 88888888 888     
+# 888        Y8bd8P  Y8b.     888  888 Y88b.       888    888 888  888 888  888 Y88b 888 888 Y8b.     888     
+# 8888888888  Y88P    "Y8888  888  888  "Y888      888    888 "Y888888 888  888  "Y88888 888  "Y8888  888   
+#   
+# - A class that handles the events from the event loop in main
 # ----------------------------------------------------------------------------------------------------------------------
 class EventHandler:
     def __init__(self, frame) -> None:
@@ -31,7 +40,16 @@ class EventHandler:
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Mainframe - An object that has the sg.Window and the values from window.read() as well as all of the required
+# 888b     d888          d8b           .d888                                        
+# 8888b   d8888          Y8P          d88P"                                         
+# 88888b.d88888                       888                                           
+# 888Y88888P888  8888b.  888 88888b.  888888 888d888 8888b.  88888b.d88b.   .d88b.  
+# 888 Y888P 888     "88b 888 888 "88b 888    888P"      "88b 888 "888 "88b d8P  Y8b 
+# 888  Y8P  888 .d888888 888 888  888 888    888    .d888888 888  888  888 88888888 
+# 888   "   888 888  888 888 888  888 888    888    888  888 888  888  888 Y8b.     
+# 888       888 "Y888888 888 888  888 888    888    "Y888888 888  888  888  "Y8888  
+#
+# - An object that has the sg.Window and the values from window.read() as well as all of the required
 #             variables for the simulation and convolution graphs. Events are explicitly handled in main, but 
 #             most events have mainframe class methods that handle all actions.
 # ----------------------------------------------------------------------------------------------------------------------
@@ -284,8 +302,16 @@ class Mainframe:
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Convolution - An object that lives in a `mainframe`. It creates a convoluted probability distribution out of `bar` 
-# objects
+#  .d8888b.                                      888          888    d8b                   
+# d88P  Y88b                                     888          888    Y8P                   
+# 888    888                                     888          888                          
+# 888         .d88b.  88888b.  888  888  .d88b.  888 888  888 888888 888  .d88b.  88888b.  
+# 888        d88""88b 888 "88b 888  888 d88""88b 888 888  888 888    888 d88""88b 888 "88b 
+# 888    888 888  888 888  888 Y88  88P 888  888 888 888  888 888    888 888  888 888  888 
+# Y88b  d88P Y88..88P 888  888  Y8bd8P  Y88..88P 888 Y88b 888 Y88b.  888 Y88..88P 888  888 
+#  "Y8888P"   "Y88P"  888  888   Y88P    "Y88P"  888  "Y88888  "Y888 888  "Y88P"  888  888
+#
+# - An object that lives in a `mainframe`. It creates a convoluted probability distribution out of `bar` objects
 # ----------------------------------------------------------------------------------------------------------------------
 class Convolution:
     def __init__(self, frame: Mainframe):
@@ -445,7 +471,16 @@ class Convolution:
   
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Die Face - used by the simulation to display each rolled die on the left side
+# 8888888b.  d8b          8888888888                        
+# 888  "Y88b Y8P          888                               
+# 888    888              888                               
+# 888    888 888  .d88b.  8888888  8888b.   .d8888b .d88b.  
+# 888    888 888 d8P  Y8b 888         "88b d88P"   d8P  Y8b 
+# 888    888 888 88888888 888     .d888888 888     88888888 
+# 888  .d88P 888 Y8b.     888     888  888 Y88b.   Y8b.     
+# 8888888P"  888  "Y8888  888     "Y888888  "Y8888P "Y8888 
+#
+# - used by the simulation to display each rolled die on the left side
 # ----------------------------------------------------------------------------------------------------------------------
 class DieFace:
     def __init__(self, graph: sg.Graph, images, stack_position, x=-73, y=55, y_sep=40):
@@ -478,7 +513,16 @@ class DieFace:
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Simulation - Creates `roll` objects and draws them on the graph according to their sum, frequency, and size.
+#  .d8888b.  d8b                        888          888    d8b                   
+# d88P  Y88b Y8P                        888          888    Y8P                   
+# Y88b.                                 888          888                          
+#  "Y888b.   888 88888b.d88b.  888  888 888  8888b.  888888 888  .d88b.  88888b.  
+#     "Y88b. 888 888 "888 "88b 888  888 888     "88b 888    888 d88""88b 888 "88b 
+#       "888 888 888  888  888 888  888 888 .d888888 888    888 888  888 888  888 
+# Y88b  d88P 888 888  888  888 Y88b 888 888 888  888 Y88b.  888 Y88..88P 888  888 
+#  "Y8888P"  888 888  888  888  "Y88888 888 "Y888888  "Y888 888  "Y88P"  888  888
+#
+# - Creates `roll` objects and draws them on the graph according to their sum, frequency, and size.
 # ----------------------------------------------------------------------------------------------------------------------
 class Simulation:
     def __init__(self, frame: Mainframe):
@@ -501,6 +545,7 @@ class Simulation:
         # Self
         # self.f.window['log'].update(value='')
         self.f.window['sim column'].Widget.canvas.yview_moveto(1.0)
+        self.f.window['Pause'].update(text='Pause')
         self.selection_box_id = None
         self.partition = self.make_partition()
         self.possible_outcomes = self.f.convolution.possible_outcomes
@@ -651,7 +696,16 @@ class Simulation:
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Roll - A member of a simulation
+# 8888888b.          888 888 
+# 888   Y88b         888 888 
+# 888    888         888 888 
+# 888   d88P .d88b.  888 888 
+# 8888888P" d88""88b 888 888 
+# 888 T88b  888  888 888 888 
+# 888  T88b Y88..88P 888 888 
+# 888   T88b "Y88P"  888 888
+#
+# - A member of a simulation
 # ----------------------------------------------------------------------------------------------------------------------
 class Roll:
     def __init__(self, sim: Simulation, roll_number: int, partition, counter, box_size, graph, dice, previous_roll):
@@ -758,7 +812,16 @@ class Roll:
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Bar - A member of a convolution, uses the simulation when a bar is selected
+# 888888b.                    
+# 888  "88b                   
+# 888  .88P                   
+# 8888888K.   8888b.  888d888 
+# 888  "Y88b     "88b 888P"   
+# 888    888 .d888888 888     
+# 888   d88P 888  888 888     
+# 8888888P"  "Y888888 888      
+# 
+# - A member of a convolution, uses the simulation when a bar is selected
 # ----------------------------------------------------------------------------------------------------------------------
 class Bar:
     def __init__(self, conv, bin, prob, size, coord):

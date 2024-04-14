@@ -106,8 +106,8 @@ def clear_canvas(canvas_agg):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-def error_popup(error, message):
-    sg.popup_quick_message(f'\n{error}:\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=5, grab_anywhere=True)
+def error_popup(error, message, duration=5):
+    sg.popup_quick_message(f'\n{error}:\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=duration, grab_anywhere=True)
 
 
 ###########################################################################################################################
@@ -284,6 +284,13 @@ def main():
                 mf.sim.trial_number += 1
             else:
                 mf.simulate = False
+                max_bin = None
+                max_length = 0
+                for bin, outcomes in mf.sim.bin_dictionary.items():
+                    if len(outcomes) > max_length:
+                        max_bin = bin
+                        max_length = len(outcomes)
+                error_popup('Finished!', f'The sum with the most outcomes was {max_bin},\nwhich was rolled {max_length} times.')
                 # mf.window['dice gif'].update(data=None)
 
     # end of event loop
