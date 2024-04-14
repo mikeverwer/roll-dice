@@ -248,6 +248,7 @@ class Mainframe:
             self.mean_and_deviation(slider_values)
             self.die_distribution = [_ for _ in slider_values]
             self.convolution = Convolution(self)
+            self.window['preset'].update(value='')
 
         else:  # Slider is locked, keep value constant
             self.values[event] = self.locked_values[int(event[-1]) - 1]

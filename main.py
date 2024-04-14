@@ -191,6 +191,7 @@ def main():
 
         elif event.startswith('face'):
             mf.activate_slider(event=event)
+            mf.window['rolls'].set_focus()
 
         elif event.startswith('lock'):
             active_lock = int(event[-1])
@@ -206,6 +207,9 @@ def main():
         elif event == 'Randomize':
             if False in mf.locks:  # At least 1 slider is unlocked
                 mf.die_distribution = mf.random_distribution(get_var=True)
+                mf.window['preset'].update(value='')
+                mf.window['Randomize'].set_focus()
+
                 mf.set_sliders_to(mf.die_distribution)
 
             mf.die_distribution = [mf.values[f'face{i}'] for i in range(1, 7)]
