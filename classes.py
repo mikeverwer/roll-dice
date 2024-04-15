@@ -15,7 +15,18 @@ The `simulation` class controls the entire simulation. It is invoked as an objec
 incremented there.  The simulation creates `roll` objects and draws them on the graph.  
 Each `roll` is remembered by the `simulation` and, when selected, will display the outcome of each die rolled.
 
-Note: A `simulation` requires a `mainframe` as an initializing variable.
+Note: A `simulation` requires a `mainframe` as an initializing variable, whereas the `mainframe` initiates its own
+    `convolution`.
+
+The figure below is a usage network, NOT a class structure tree.
+
+                                       _____Frame_____ 
+                                      /       |       \
+                                     /  Event Handler  \
+                                    /                   \
+                               Convolution          Simulation
+                                    |              /          \ <--- *not a true connection, only accesses the sim graph
+                                   Bar           Roll       DieFace
 """
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -155,22 +166,38 @@ class Mainframe:
         else: self.mean, self.deviation = mean, standard_deviation
 
     
-    def activate_hit_detect(self,click, graph: sg.Graph, event, objects: list[object], prev_selection: tuple[int, object] = (None, None)):
+    def activate_hit_detect(self, click, graph: sg.Graph, event: str, objects: list[object], 
+                            prev_selection: tuple[int, object] = (None, None), offset: tuple[int, int] = (0, 0)):
+
         selection_id = prev_selection[0]
         if selection_id:  # delete drawings 
             graph.delete_figure(selection_id)
         found = False
         print(f"Clicked {event}: {click}, \nLooking... ", end="")
-        for Object in objects:
-            if not found:
-                if Object.is_hit(click):
-                    found = True
-                    selection_id = graph.draw_rectangle(Object.hitbox[0], Object.hitbox[1], 'magenta')
-                    print(f'found: {Object}\n')
-                    Object.display()
-                    return selection_id, Object
+        if event == 'simulation graph' and click[1] < 0:  # clicked one of the bin labels maybe
+            if self.convolution.selection_box_id:  # delete drawings 
+                self.con_graph.delete_figure(self.convolution.selection_box_id)
+            for i, bin in enumerate(self.sim.possible_outcomes):
+                if not found:
+                    if click[0] in range(self.sim.box_width * i, self.sim.box_width * (i + 1)):
+                        found = True
+                        if self.sim.possible_outcomes == self.convolution.possible_outcomes:  #TODO, better detection for convolution change
+                            hit_bin: Bar = self.convolution.bins[i]
+                            hit_bin.display()
+                            self.convolution.selection_box_id = self.con_graph.draw_rectangle(hit_bin.hitbox[0], hit_bin.hitbox[1], 'magenta')
+                            print(f'found: {hit_bin}\n')
+
+        elif click[0] > 0 and click[1] > 0:  # only search if the click is in the graphing region
+            for Object in objects:
+                if not found:
+                    if Object.is_hit(click, xoffset=offset[0], yoffset=offset[1]):
+                        found = True
+                        selection_id = graph.draw_rectangle(Object.hitbox[0], Object.hitbox[1], 'magenta')
+                        print(f'found: {Object}\n')
+                        Object.display()
+                        return selection_id, Object
         if not found:
-            print('found: nothing.\n')
+            print('found nothing.\n')
 
 
     def add_preset(self, new_preset: str):
@@ -549,7 +576,7 @@ class Simulation:
             tick_string = f'{y_tick:>{string_length}}'
             self.graph.draw_line((-8, y_tick_height), (0, y_tick_height))
             self.graph.draw_line((0, y_tick_height), (self.top_right[0], y_tick_height), color='#dcdcdc')
-            self.graph.draw_text(tick_string, location=(-(len(tick_string) * 6.33) , y_tick_height)) 
+            self.graph.draw_text(tick_string, location=(-(len(tick_string) * 6.33) , y_tick_height))  # 6.33 is an approximate conversion factor for 10pt to px
             y_tick_height += delta_y
             y_tick += y_tick_diff
         # Draw x-axis tick marks and labels
@@ -692,7 +719,6 @@ class Roll:
                         raise TypeError
         this_sum: int = np.dot(outcome, [1, 2, 3, 4, 5, 6])
 
-
         try:
             counter[this_sum] += 1
             self.frequency = counter[this_sum]
@@ -756,8 +782,8 @@ class Roll:
                 self.sim.die_faces[i].set_image(outcome)
         self.sim.delete_ids()
         self.sim.display_ids.append(
-            self.graph.draw_text(text=f"{self.frequency}",location=(-len(str(self.frequency)) * 6.33, self.px_coord[1] + self.box_height), 
-                                 text_location=sg.TEXT_LOCATION_LEFT, color='magenta'))
+            self.graph.draw_text(text=f"{self.frequency}",location=(-4 - (len(str(self.frequency))) * 6.33, self.px_coord[1] + self.box_height), 
+                                 text_location=sg.TEXT_LOCATION_LEFT, color='magenta', font='_ 10 bold'))
         self.sim.display_ids.append(self.graph.draw_text(self.sum, location=(-62, 0), color='black', font='_ 16 bold'))
         self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-84, -40),
                                                          text_location=sg.TEXT_LOCATION_LEFT, color='magenta', font='_ 16 bold'))
@@ -787,34 +813,39 @@ class Bar:
     def __init__(self, conv, bin, prob, size, coord):
         self.conv: Convolution = conv
         self.graph = self.conv.graph
-        self.sim_graph = self.conv.f.sim_graph
-        self.bin = bin
-        self.probability = prob
-        self.size = size
-        self.x_coord = coord
-        self.hitbox = self.make_hitbox()  # (top-left, bottom-right)
-        self.draw_bar(*self.hitbox)
+        self.bin = bin                          # the label of the bin (not the index of the bin)
+        self.probability = prob                 # probability of the sum
+        self.size = size                        # pixel size of the bar
+        self.x_coord = coord                    # x-coordinate of the bottom left corner
+        self.hitbox = self.make_hitbox()        # (top-left, bottom-right)
+        self.draw_bar(*self.hitbox)             # draws itself on the convolution graph
+
 
     def __repr__(self) -> str:
         return f"Sum = {self.bin}, probability = {self.probability}"
     
+    
     def __eq__(self, other: Self) -> bool:
         return self.probability == other.probability and self.bin == other.bin
     
+    
     def __lt__(self, other: Self) -> bool:
         return self.probability < other.probability and self.bin < other.bin
+    
     
     def make_hitbox(self):
         top_left = (self.x_coord, self.size[1])
         bottom_right = (self.x_coord + self.size[0], 0)
         return top_left, bottom_right
+    
            
     def draw_bar(self, t_l=None, b_r=None, fill='RoyalBlue4'):
-        if t_l is None:
+        if t_l is None:  # top_left
             t_l = (0, self.size[1])
-        if b_r is None:
+        if b_r is None:  # bottom_right
             b_r = (self.size[0], 0)
         self.graph.draw_rectangle(top_left=t_l, bottom_right=b_r, fill_color=fill)
+
 
     def is_hit(self, click: tuple, xoffset: int = 0, yoffset: int = 0, offset: None | int = None):
         if offset is not None:
@@ -832,16 +863,21 @@ class Bar:
                 return False
         else:
             return False
+        
     
     def display(self):
+        # delete any previous display on the convolution graph, then draw the display info.
         self.conv.current_selection = self.bin
-        self.conv.delete_ids()
+        self.conv.delete_ids()  # default is these selection ids
         self.conv.selected_bar_display_ids.append(self.graph.draw_text(
-            text=f"Sum: {self.bin}  |  p = {self.probability:.4f}", location=(10, self.conv.top_right[1] - 25), 
-            color='magenta', font='_ 14 bold', text_location=sg.TEXT_LOCATION_LEFT
-        ))
+                text=f"Sum: {self.bin}  |  p = {self.probability:.4f}", location=(10, self.conv.top_right[1] - 25), 
+                color='magenta', font='_ 14 bold', text_location=sg.TEXT_LOCATION_LEFT
+            )
+        )
+        
+        # highlight all the rolls in the currently displaying bin of the simulation
         if self.conv.f.sim:
-            sim: Simulation = self.conv.f.sim
+            sim: Simulation = self.conv.f.sim  # this bar lives in a convolution, which is housed in a frame. the frame has a simulation.
             if len(sim.bin_dictionary) == len(self.conv.possible_outcomes):
                 previous_bin = sim.selected_bin
                 sim.selected_bin = self.bin
@@ -849,16 +885,4 @@ class Bar:
                 sim.draw_column_outlines(bin_number=self.bin - self.conv.possible_outcomes[0])
             else:
                 sim.deselect_all_bins()
-
-
-            if False:
-                self.conv.f.convolution_display_ids = self.conv.f.sim.delete_ids(self.conv.f.convolution_display_ids)
-                self.conv.f.convolution_selection_lines = self.conv.f.sim.delete_ids(self.conv.f.convolution_selection_lines)
-                # Draw bin outline on sim graph
-                x1 = (self.bin - self.conv.number_of_dice) * self.conv.f.sim.box_width
-                x2 = (self.bin - self.conv.number_of_dice + 1) * self.conv.f.sim.box_width
-                y = self.conv.f.sim.top_right[1]
-                self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x1, y), color='#dcdcdc'))
-                self.conv.f.convolution_selection_lines.append(self.sim_graph.draw_line((x2, y), color='#dcdcdc'))
-
         return

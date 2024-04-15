@@ -121,7 +121,6 @@ def main():
     # ---------------------------------------------------------------------------------------------------------------------
     # Initialize Window
     # ---------------------------------------------------------------------------------------------------------------------
-    hoverable_images = [images.author, images.menubar_CLT]
     sg.theme('Default1')
     mf = cl.Mainframe(images)  # MainFrame object, see classes.py
     window = make.Mainframe_func(sg, images, theme='Default1', frame=mf)
@@ -186,7 +185,6 @@ def main():
             if size != mf.window.size:
                 mf.resize_graphs()
                 size = mf.window.size
-                print(size)
 
         elif event == 'SaveSettings':
             filename = sg.popup_get_file('Save Settings', save_as=True, no_window=True)
@@ -256,7 +254,8 @@ def main():
                 hit_bin: cl.Bar = None
                 mf.convolution.selection_box_id, hit_bin = mf.activate_hit_detect(
                     click=mf.values[event], graph=mf.convolution.graph, event=event,
-                    objects=mf.convolution.bins, prev_selection=(mf.convolution.selection_box_id, None)
+                    objects=mf.convolution.bins, prev_selection=(mf.convolution.selection_box_id, None),
+                    offset=(0, 15)
                 )
             except TypeError:
                 mf.convolution.selection_box_id = None
