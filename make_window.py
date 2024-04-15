@@ -70,7 +70,7 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
                     ], relief='raised', background_color='light cyan', p=((0, 0), (0, 4))), sg.Push()
                 ],
                 slider_columns, 
-                [sg.Text('-' * 59, p=((0, 0), (0, 16)))],
+                [sg.Text('\u2014' * 30, p=((0, 0), (0, 16)))],
                 [sg.Push(), sg.Text('Preset Distributions'), sg.Combo(frame.preset_list, default_value=None, size=(10, 10),
                                                             enable_events=True, readonly=False, k='preset'),
                 sg.Button(" Add ", k='add preset', p=((16, 50), (0, 0))),
@@ -94,33 +94,17 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
 
     grid_layout = [
         [sg.Text('The Central Limit Theorem', font="Helvetica 26 bold")],
-        [sg.Stretch()],
-        [sg.Frame('Dice Distribution  |  Click on a die face to lock its value', layout=[
-                [sg.Push(), sg.Text('Use the sliders to set a probability distribution for the dice.', font='helvetica 10', p=((0, 0), (2, 2))), sg.Push()],
-                [sg.Push(),
-                sg.Frame('', layout=[
-                    [sg.Text(f'Mean: {frame.mean:.2f}', font='helvetica 10 bold', background_color='light cyan', k='mean'),
-                    sg.Text(f'Standard Deviation: {frame.deviation:.2f}', k='deviation', font='helvetica 10 bold', background_color='light cyan')]
-                    ], relief='raised', background_color='light cyan', p=((0, 0), (0, 4))), sg.Push()
-                ],
-                slider_columns, 
-                [sg.Text('_' * 59, p=((0, 0), (0, 16)))],
-                [sg.Push(), sg.Text('Preset Distributions'), sg.Combo(frame.preset_list, default_value=None, size=(10, 10),
-                                                            enable_events=True, readonly=False, k='preset'),
-                sg.Button(" Add ", k='add preset', p=((16, 50), (0, 0))),
-                sg.Button('Randomize', button_color='cyan'), sg.Push()],
-                [sg.Text('', font='Courier 1')],
-            ], font='Helvetica 12 bold', k='die inputs frame', p=((0, 0), (0, 0)))
-        ],
+        [sg.VPush(background_color='white')],
+        [sg.Frame('Dice Distribution  |  Click on a die face to lock its value', layout=die_dist_layout, font='Helvetica 12 bold', k='die inputs frame', p=((0, 0), (0, 0)))],
         [sg.Frame(title='', relief='raised', layout=[
                 [sg.Text(' Number of dice to roll: ', font='Helvetica 12 bold'), sg.Input(s=4, k='dice', default_text=frame.dice, readonly=False, justification='right', enable_events=True),
                 sg.Column([
                     [sg.Button(image_data=frame.images.up, key='up')],
                     [sg.Button(image_data=frame.images.down, key='down')]
                 ])]
-            ], p=((0, 0), (8, 8))
+            ], p=((0, 12), (8, 8))
          ),
-         sg.Frame(title=None, layout=sim_input_column_layout, p=(4, 4), relief='raised')
+         sg.Frame(title=None, layout=sim_input_column_layout, p=(4, 8), relief='raised')
         ]
         
     ]

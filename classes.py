@@ -74,7 +74,7 @@ class Mainframe:
         self.dice = 1
         self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
         self.update_interval = 64
-        self.sim_margins: list[list[int]] = [[100, 20], [50, 50]]  #(left, right), (bottom, top)
+        self.sim_margins: list[list[int]] = [[100, 20], [75, 50]]  #(left, right), (bottom, top)
         self.sim_graph_size = (1000, 10000)
         self.con_margins: list[list[int]] = [[10, 10], [25, 10]]  #(left, right), (bottom, top)
         self.con_graph_size = (450, 325)
@@ -342,6 +342,7 @@ class Convolution:
         self.selection_box_id = None
         self.current_selection = None
         self.selected_bar_display_ids = []
+        
 
     def create_convoluted_distribution(self, dice=None, get_var=False):
         if dice is None:
@@ -356,11 +357,12 @@ class Convolution:
         else: 
             self.conv_dist = convoluted_distribution
 
+
     def trim_outcomes(self):
         feasible_outcomes = self.possible_outcomes
         distribution = self.conv_dist
         
-        tol = 0.5
+        tol = 0.1
         found = False
         for i, x in enumerate(distribution):
             if not found:
@@ -380,6 +382,7 @@ class Convolution:
         self.conv_dist = distribution[left_border_index : right_border_index + 1]
         return
     
+    
     def drawing_area(self):
         self.graph.draw_rectangle((0, 0), self.top_right)
         # Draw x-axis tick marks and labels
@@ -395,7 +398,6 @@ class Convolution:
         highest_probability = max(self.conv_dist)
         self.highest_point = self.top_right[1] - 45
         self.scalar = self.highest_point / highest_probability
-        print('about to trim')
         self.trim_outcomes()
         bins = len(self.conv_dist)
         self.bin_width = self.top_right[0] // bins
@@ -757,7 +759,7 @@ class Roll:
             self.graph.draw_text(text=f"{self.frequency}",location=(-len(str(self.frequency)) * 6.33, self.px_coord[1] + self.box_height), 
                                  text_location=sg.TEXT_LOCATION_LEFT, color='magenta'))
         self.sim.display_ids.append(self.graph.draw_text(self.sum, location=(-62, 0), color='black', font='_ 16 bold'))
-        self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-84, -25),
+        self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-84, -40),
                                                          text_location=sg.TEXT_LOCATION_LEFT, color='magenta', font='_ 16 bold'))
 
         # self.graph.draw_line((-40, 0), (-84, 0))
