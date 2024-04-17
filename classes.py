@@ -478,7 +478,8 @@ class Convolution:
     def drawing_area(self):
         self.graph.draw_rectangle((0, 0), self.top_right)
         # Draw x-axis tick marks and labels
-        x_tick_label_diff = len(self.possible_outcomes) // 5  # ensures there are always 6 tick labels
+        x_tick_label_diff = len(self.possible_outcomes) // 5  # ensures there are always 6 or fewer tick labels
+        x_tick_label_diff = 1 if x_tick_label_diff < 1 else x_tick_label_diff
         for i, bin in enumerate(self.possible_outcomes):
             box_center = self.bin_width * (i + 0.5)
             self.graph.draw_line((box_center, -1), (box_center, -5))   # box_center = self.box_width * (i + 0.5)
