@@ -1,6 +1,4 @@
-from types import ModuleType
 import PySimpleGUI as sg
-# from classes import mainframe
 import classes as cl
 
 def update_frame(window: sg.Window, frame: cl.Mainframe):
@@ -9,6 +7,8 @@ def update_frame(window: sg.Window, frame: cl.Mainframe):
     f.window.set_min_size((810, 765))
     screen_width, screen_height = sg.Window.get_screen_size()
     f.window.size = ((0.85 * screen_width, 0.75 * screen_height))
+    f.resize_graphs()
+
     # initialize convolution graph
     f.con_graph = f.window['convolution graph']
     f.convolution.graph = f.con_graph
@@ -19,14 +19,10 @@ def update_frame(window: sg.Window, frame: cl.Mainframe):
     drag_exclusions += [f'face{i}' for i in range(1, 7)] + [f'lock{j}' for j in range(1, 7)]
     for item in drag_exclusions:
         f.window[f'{item}'].grab_anywhere_exclude()
-    # f.convolution.graph.grab_anywhere_exclude()
-    # f.window['simulation graph'].grab_anywhere_exclude()
-    # f.window['Pause'].grab_anywhere_exclude()
-    # f.window['go'].grab_anywhere_exclude()
 
 
 def do_binds(window, button_images):
-    for image in button_images:  # key for image button must be tuple with ('hover', ...)
+    for image in button_images:  # key for image button must be tuple with ('hover', key)
         window[('hover', image)].bind('<Enter>', 'ENTER')
         window[('hover', image)].bind('<Leave>', 'EXIT')
     window.bind("<Configure>", "resize")
@@ -39,9 +35,9 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
     # Screen and Graph Sizing
     # ----------------------------------------------------------------------------------------------------------------------
     screen_width, screen_height = sg.Window.get_screen_size()
-    frame.sim_graph_size = (screen_width - 500, 10_000)
-    frame.con_graph_size = (450, 325)
-    smallest_height = screen_height - 105
+    frame.sim_graph_size = (screen_width - 500, 10_000)  # 500 px required for left column + random extra space
+    frame.con_graph_size = (450, 325)  # should fit within any screensize
+    frame.sim_viewing_height = screen_height - 105  # the vertical number of pixels of the sim graph that get displayed
 
 
     # ----------------------------------------------------------------------------------------------------------------------
@@ -79,7 +75,7 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
             ]
     
     sim_input_column_layout = [
-        [sg.Text('Number of rolls: ', p=((4, 0), (0, 4))), sg.Input(s=9, default_text=100, k='rolls', p=((0, 0), (0, 4)))],
+        [sg.Text('Number of rolls: ', p=((4, 0), (0, 4))), sg.Input(s=9, default_text=200, k='rolls', p=((0, 0), (0, 4)))],
         [sg.Push(), 
         sg.Button('Pause', button_color='#1b1b1b on darkgrey', font='Helvetica 12 bold', size=(8, 1), border_width=2),
         sg.Button('Roll!', k='go', border_width=2, size=(8, 1), bind_return_key=True, 
@@ -94,7 +90,6 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
 
     grid_layout = [
         [sg.Text('The Central Limit Theorem', font="Helvetica 26 bold")],
-        [sg.VPush(background_color='white')],
         [sg.Frame('Dice Distribution  |  Click on a die face to lock its value', layout=die_dist_layout, font='Helvetica 12 bold', k='die inputs frame', p=((0, 0), (0, 0)))],
         [sg.Frame(title='', relief='raised', layout=[
                 [sg.Text(' Number of dice to roll: ', font='Helvetica 12 bold'), sg.Input(s=4, k='dice', default_text=frame.dice, readonly=False, justification='right', enable_events=True),
@@ -113,10 +108,10 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
     # Logging
     # ----------------------------------------------------------------------------------------------------------------------
     logging_layout = [
-        [sg.Text(frame.logging_UI_text, font='Courier 10', justification='left', k='outcome_UI_text'), sg.Push()],
+        [sg.Button('Clear'), sg.Push()],
         [sg.Push(),
          sg.Multiline(size=(54, 15),
-                      default_text='All the roll outcomes will be printed here!\nThe values describe how often each face appeared.\n',
+                      default_text='Logging information will be printed here.\nTurn on `logging` or `full_logging` to see event/values log.\n',
                       font='Courier 10', expand_x=True, expand_y=True, write_only=True, reroute_stdout=True,
                       reroute_stderr=True,
                       echo_stdout_stderr=True, autoscroll=True, auto_refresh=True, key='log'),
@@ -147,7 +142,7 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
 
     sim_column = [
         [sg.Stretch(), 
-         sg.Column(layout=sim_layout, scrollable=True, vertical_scroll_only=True, size=(frame.sim_graph_size[0], smallest_height), key='sim column',
+         sg.Column(layout=sim_layout, scrollable=True, vertical_scroll_only=True, size=(frame.sim_graph_size[0], frame.sim_viewing_height), key='sim column',
                    expand_x=True, expand_y=True, vertical_alignment='top',
                    sbar_width=12, sbar_arrow_width=6, sbar_relief='flat', sbar_arrow_color='#1b1b1b', sbar_background_color='white', sbar_trough_color='#dcdcdc'
                    ),

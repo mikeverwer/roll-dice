@@ -140,16 +140,16 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="2"
-     inkscape:cx="509.25"
-     inkscape:cy="221.25"
+     inkscape:zoom="1.4142136"
+     inkscape:cx="512.65242"
+     inkscape:cy="422.4963"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1920"
      inkscape:window-height="1017"
-     inkscape:window-x="-8"
-     inkscape:window-y="-8"
+     inkscape:window-x="1912"
+     inkscape:window-y="46"
      inkscape:window-maximized="1"
      inkscape:showpageshadow="0"
      inkscape:pagecheckerboard="1"
@@ -1010,6 +1010,41 @@
          style="fill:none;stroke:#1b1b1b;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
          d="m 185.7003,55.537892 h 3"
          id="path3-6" />
+    </g>
+    <g
+       id="g9"
+       inkscape:export-filename="splash.png"
+       inkscape:export-xdpi="96.0011"
+       inkscape:export-ydpi="96.0011">
+      <rect
+         style="fill:#1b1b1b;fill-opacity:1;stroke:#f0f0f0;stroke-width:0.265112;stroke-linecap:square;paint-order:markers fill stroke"
+         id="rect1"
+         width="87.370407"
+         height="40.224064"
+         x="83.067368"
+         y="100.27954" />
+      <text
+         xml:space="preserve"
+         style="font-size:6.35px;line-height:1.25;font-family:Roboto;-inkscape-font-specification:Roboto;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#f0f0f0;stroke-width:0.264583"
+         x="126.65645"
+         y="113.333"
+         id="text1"><tspan
+           sodipodi:role="line"
+           id="tspan1"
+           style="font-weight:bold;fill:#f0f0f0;stroke-width:0.264583"
+           x="126.65645"
+           y="113.333">Roll Dice</tspan><tspan
+           sodipodi:role="line"
+           style="font-weight:bold;fill:#f0f0f0;stroke-width:0.264583"
+           x="126.65645"
+           y="121.2705"
+           id="tspan6">Created by Mike Verwer</tspan><tspan
+           sodipodi:role="line"
+           style="font-weight:bold;fill:#f0f0f0;stroke-width:0.264583"
+           x="126.65645"
+           y="129.20799"
+           id="tspan3"
+           dy="0 0 0 1.6837982">   Loading...</tspan></text>
     </g>
   </g>
 </svg>

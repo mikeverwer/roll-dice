@@ -6,27 +6,29 @@ import numpy as np
 """
 The classes required for the Roll Dice simulation window.  The utilization of the classes is described below.
 
-A `mainframe` houses the window sg object, values dictionary, and the convolution of the `n` die.
+A `Mainframe` houses the window sg object and the values dictionary, the convolution of the `n` die, as well as 
+the simulation of the rolls.
 
-A `convolution` is an object that has a convoluted distribution graph with each of the bars of the graph being
-their own individual `bar` objects.  
+A `Convolution` is an object that has a convoluted distribution graph with each of the bars of the graph being
+their own individual `Bar` objects.  This is the theoretical probability distribution for rolling the `n` dice.
 
-The `simulation` class controls the entire simulation. It is invoked as an object in main and the step is 
-incremented there.  The simulation creates `roll` objects and draws them on the graph.  
-Each `roll` is remembered by the `simulation` and, when selected, will display the outcome of each die rolled.
+The `Simulation` class controls the entire simulation. It is invoked as an object by the `EventHandler` and the step is 
+incremented there.  The simulation creates `Roll` objects and draws them on the graph.  
+Each `Roll` is remembered by the `simulation` and, when selected, will display the outcome of each die rolled.
 
-Note: A `simulation` requires a `mainframe` as an initializing variable, whereas the `mainframe` initiates its own
-    `convolution`.
+Note: A `simulation` requires a `mainframe` as an initializing variable, so it can only be created AFTER the
+    mainframe has been fully instantiated. Whereas the `mainframe` instantiates its own `convolution`.  
 
 The figure below is a usage network, NOT a class structure tree.
 
-                                       _____Frame_____ 
-                                      /       |       \
-                                     /  Event Handler  \
-                                    /                   \
-                               Convolution          Simulation
-                                    |              /          \ <--- *not a true connection, only accesses the sim graph
-                                   Bar           Roll       DieFace
+           _____Frame_____ 
+          /       |       \
+         /  Event Handler  \
+        /                   \
+   Convolution    /----> Simulation
+        |        /      /          \ <--- *not a true connection, only accesses the sim graph
+       Bar -----/     Roll ----> DieFace
+
 """
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -40,6 +42,7 @@ The figure below is a usage network, NOT a class structure tree.
 # 8888888888  Y88P    "Y8888  888  888  "Y888      888    888 "Y888888 888  888  "Y88888 888  "Y8888  888   
 #   
 # - A class that handles the events from the event loop in main
+# - Not Implemented.
 # ----------------------------------------------------------------------------------------------------------------------
 class EventHandler:
     def __init__(self, frame) -> None:
@@ -47,7 +50,7 @@ class EventHandler:
 
     def handle(self, event) -> None:
         mf = self.mf
-        # the code from inside the event loop goes here the event.
+        # the code from inside the event loop goes here.
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -67,11 +70,13 @@ class EventHandler:
 class Mainframe:
     def __init__(self, images=None, window=None, values={}):
         print('[LOG] Initializing frame... ', end='')
+        # Inheritance
         self.images = images
         self.window = window
         self.values = values
-        self.locked_values = [0] * 6
-        self.locks = [False] * 6
+        
+        # Self
+        # Initializing frame variables
         self.preset_list = ['Fair', 'Sloped', 'Valley', 'Hill', 'Alternating']
         self.presets = {
                'Fair': [float(100 / 6), float(100 / 6), float(100 / 6), float(100 / 6), float(100 / 6), 100 - float(500 / 6)],
@@ -80,57 +85,80 @@ class Mainframe:
                'Hill': [2, 12, 40, 38, 7, 1],
                'Alternating': [32, 0, 32, 0, 32, 4],
         }
-        self.die_distribution = self.random_distribution(get_var=True)
-        print(f"Starting die distribution: {self.die_distribution}", end='... ')
-        self.dice = 1
-        self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)
-        self.update_interval = 64
-        self.sim_margins: list[list[int]] = [[100, 20], [75, 50]]  #(left, right), (bottom, top)
-        self.sim_graph_size = (1000, 10000)
-        self.con_margins: list[list[int]] = [[10, 10], [25, 10]]  #(left, right), (bottom, top)
-        self.con_graph_size = (450, 325)
-        self.con_graph: sg.Graph = None
+        self.dice = 1  # number of dice
+
+        # Controlling variables
+        self.update_interval = 64       # controls framerate / speed of simulation
+        self.simulate = False           # turns the simulation on or off (pause/play)
+        self.matching_graphs = False    # if the graphs match, we can select and compare columns between sim. and conv.
+
+        # Graph dimensions and margins
+        # Simulation graph
+        self.sim_margins: list[list[int]] = [[100, 20], [75, 50]]  # (left, right), (bottom, top)
+        self.sim_graph_size: tuple[int, int] = (1000, 10000)       # the height extends far past what is shown to allow for many rolls, the values get overridden in make_window
+        self.sim_viewing_height: int = None                        # height of the simulation graph that gets displayed
         self.sim_graph: sg.Graph = None
+        # Convolution graph
+        self.con_margins: list[list[int]] = [[10, 10], [25, 10]]   # (left, right), (bottom, top)
+        self.con_graph_size: tuple[int, int] = (450, 325)
+        self.con_graph: sg.Graph = None
+
+        # Single Die Distribution
+        self.locked_values: list[int] = [0] * 6     # List to hold the values that each slider may be locked at.
+        self.locks: list[bool] = [False] * 6        # List of bools to keep track of which sliders are locked 
+        self.die_distribution: list[float | int] = self.random_distribution(get_var=True)  # distribution that sums to 100
+        print(f"Starting die distribution: {self.die_distribution}", end='... ')
+        self.mean, self.deviation = self.mean_and_deviation([value / 100 for value in self.die_distribution], update=False)  # Type: float, float
+        
+        # Initialize Simulation 
         self.sim: Simulation = None
-        self.extra_space = 0
-        self.logging_UI_text = ' '
-        self.simulate = False
-        self.convolution: Convolution = Convolution(self)
+
+        # Initialize Convolution
         self.convolution_title = f' The Probability Distribution for the Sum of {self.dice} Dice '
-        self.convolution_display_ids = []
-        self.convolution_selection_lines = []
+        self.convolution: Convolution = Convolution(self)  # requires a frame as a parameter
+        self.convolution_display_ids = []                  # Figure ID's for the figures of the bar display method on the convolution graph
+
         print(f'Complete!\n')
 
     
     def resize_graphs(self):
+        """
+        The graphs do not actually get resized.  When initialized, the graph has a width and view height that fill the available screen size. 
+        This function re-defines the drawing area of the simulation to fit in the new window size.
+        """
         window_size = self.window.size
         self.sim_graph_size = (window_size[0] - 475, 10_000)
-        # self.con_graph_size = (450, window_size[1] - 500)
-        # self.convolution.top_right = (self.con_graph_size[0] - sum(self.con_margins[0]), self.con_graph_size[1] - sum(self.con_margins[1]))
+        self.sim_viewing_height = window_size[1] - 105  # the vertical number of pixels of the sim graph that get displayed
         if self.sim:
             self.sim.top_right = (self.sim_graph_size[0] - sum(self.sim_margins[0]), self.sim_graph_size[1] - sum(self.sim_margins[1]))
         
 
     def random_distribution(self, get_var=False):
+        """
+        Creates a randomized probability distribution (in percent) that allows for some values to remain fixed.
+        As long as the lengths of `locked_values` and `locks` are equal, can create a distribution for arbitrarily many outcomes.
+        :param get_var: Type - bool: If True, returns a list, else sets self.die_distribution to the created list.
+        """
         locked_sum = sum(self.locked_values)
         sum_to = 100 - locked_sum
         random_values = []
-        for locked in self.locks:
+        for locked in self.locks:  # find the unlocked faces and create a random number for each one found
             if not locked:
                 random_values.append(random.random())
         total = sum(random_values)
+        # Normalize the random values so they sum to the correct amount. Scaling factor = (desired sum) / (total of randomized numbers)
         normalized_values = [int((sum_to * value) / total) for value in random_values]
-        normalized_values[-1] = int(sum_to - sum(normalized_values[:-1]))
+        normalized_values[-1] = int(sum_to - sum(normalized_values[:-1]))  # trim off any rounding error from the final entry
+
+        # build a valid, and ordered, distribution from the randomized values and the locked values
         valid_distribution = []
-        lock_counter = 0
         unlock_counter = 0
-        for locked in self.locks:
+        for lock_counter, locked in enumerate(self.locks):
             if locked:
                 valid_distribution.append(int(self.locked_values[lock_counter]))
             else:
                 valid_distribution.append(normalized_values[unlock_counter])
                 unlock_counter += 1
-            lock_counter += 1
 
         if get_var:
             return valid_distribution
@@ -138,7 +166,12 @@ class Mainframe:
             self.die_distribution = valid_distribution
 
 
-    def mean_and_deviation(self, distribution=None, update=True, dice: int = 1):
+    def mean_and_deviation(self, distribution=None, update=True):
+        """
+        Calculate the mean and standard deviation of the given distribution. 
+        :param distribution: Type - list[float|int]: If None, uses self.die_distribution
+        :param update: Type - bool: If True, will update the mean and deviation display on the frame.
+        """
         get_vars = True
         if distribution is None:
             distribution = self.die_distribution
@@ -155,8 +188,7 @@ class Mainframe:
         # for x in range(1, 7):
         for x, y in enumerate(distribution, 1):
             variance += y * ((x - mean) ** 2)
-        standard_deviation = variance ** .5        
-        mean += (dice - 1)
+        standard_deviation = variance ** .5
         
         if update:
             self.window['mean'].update(f'Mean: {mean:.2f}')
@@ -167,27 +199,27 @@ class Mainframe:
 
     
     def activate_hit_detect(self, click, graph: sg.Graph, event: str, objects: list[object], 
-                            prev_selection: tuple[int, object] = (None, None), offset: tuple[int, int] = (0, 0)):
-
+                            prev_selection: tuple[int, object] = (None, None), offset: tuple[int, int] = (0, 0)):        
         selection_id = prev_selection[0]
         if selection_id:  # delete drawings 
             graph.delete_figure(selection_id)
         found = False
         print(f"Clicked {event}: {click}, \nLooking... ", end="")
-        if event == 'simulation graph' and click[1] < 0:  # clicked one of the bin labels maybe
-            if self.convolution.selection_box_id:  # delete drawings 
+
+        # clicked the simulation graph below the x axis, select the bin if the graphs match.
+        if event == 'simulation graph' and click[1] < 0 and self.matching_graphs:
+            if self.convolution.selection_box_id:  # delete the selection box for any currently selected convolution bar
                 self.con_graph.delete_figure(self.convolution.selection_box_id)
             for i, bin in enumerate(self.sim.possible_outcomes):
                 if not found:
                     if click[0] in range(self.sim.box_width * i, self.sim.box_width * (i + 1)):
                         found = True
-                        if self.sim.possible_outcomes == self.convolution.possible_outcomes:  #TODO, better detection for convolution change
-                            hit_bin: Bar = self.convolution.bins[i]
-                            hit_bin.display()
-                            self.convolution.selection_box_id = self.con_graph.draw_rectangle(hit_bin.hitbox[0], hit_bin.hitbox[1], 'magenta')
-                            print(f'found: {hit_bin}\n')
+                        hit_bin: Bar = self.convolution.bins[i]
+                        hit_bin.display()
+                        self.convolution.selection_box_id = self.con_graph.draw_rectangle(hit_bin.hitbox[0], hit_bin.hitbox[1], 'magenta')
+                        print(f'found: {hit_bin}\n')
 
-        elif click[0] > 0 and click[1] > 0:  # only search if the click is in the graphing region
+        elif click[0] > 0 and click[1] > 0:  # only search for objects if the click is in the graphing region
             for Object in objects:
                 if not found:
                     if Object.is_hit(click, xoffset=offset[0], yoffset=offset[1]):
@@ -196,8 +228,11 @@ class Mainframe:
                         print(f'found: {Object}\n')
                         Object.display()
                         return selection_id, Object
+                    
         if not found:
             print('found nothing.\n')
+            if self.sim:
+                self.sim.deselect_all_bins()
 
 
     def add_preset(self, new_preset: str):
@@ -220,9 +255,15 @@ class Mainframe:
 
 
     def set_sliders_to(self, slider_values, reset_locks=False):
+        """
+        Used to set all sliders to pre-decided values. Used by 'Randomize' event and `set_preset`
+        :param slider_values: Type: list[inf|float] length=6: Must be present. Values to set the sliders to.
+        :param reset_locks: If True, unlocks all sliders and resets the images
+        """
         for i in range(1, 7):  # Update sliders and locks
             if self.locks[i - 1] and reset_locks is True:  # Reset locks
                 self.locks[i - 1] = False
+                self.locked_values[i - 1] = 0
                 b64_image_data = getattr(self.images, f'die{i}')
                 self.window[f'lock{i}'].update(image_data=b64_image_data)
             self.values[f'face{i}'] = slider_values[i - 1]
@@ -234,6 +275,10 @@ class Mainframe:
 
 
     def activate_slider(self, event, active_face=None, set_to_value=None):
+        """
+        Moving one slider means moving all the other sliders as well. 
+        This function facilitates that. 
+        """
         if set_to_value is None:
             set_to_value = self.values[event]
         if active_face is None:
@@ -249,8 +294,10 @@ class Mainframe:
             locked_sum = sum(self.locked_values)
             unlocked_sum = total - active_slider_value - locked_sum
 
-            # Scale the other sliders
-            if total != 100 and unlocked_sum != 0:  # scaling is required and there is at least 1 locked slider
+            # Scale the other sliders.
+
+            # Scaling is required and there is at least 1 locked slider.
+            if total != 100 and unlocked_sum != 0:  
                 # Calculate the scaling factor to preserve the relative positions
                 scaling_factor = (100 - active_slider_value - locked_sum) / unlocked_sum
 
@@ -269,36 +316,36 @@ class Mainframe:
                 slider_values[active_face - 1] += adjustment
                 self.window[active_slider_key].update(slider_values[active_face - 1])
   
-            # The unlocked sliders were all 0 and the active slider was reduced; increase an unlocked slider
+            # The unlocked sliders were all 0 and the active slider was reduced; increase an unlocked slider.
             elif unlocked_sum == 0 and total < 100:
                 next_unlocked_face = None
                 for i in range(1, 6):
-                    # Find an unlocked slider. If there are none, lock the active slider
+                    # Find an unlocked slider. If there are none, lock the active slider.
                     next_face = ((active_face - 1) + i) % 6
-                    if self.locks[next_face]:  # Skip locked sliders
+                    if self.locks[next_face]:  # Skip locked sliders.
                         next_unlocked_face = None
                         continue
                     else:
                         next_unlocked_face = next_face + 1
                         break
                 
-                # No unlocked faces were found; lock active face
+                # No unlocked faces were found; lock active face in place.
                 if next_unlocked_face is None: 
                     adjustment = 100 - total
                     slider_values[active_face - 1] += adjustment
                     self.window[active_slider_key].update(slider_values[active_face - 1])
-                # Found a slider to adjust
+                # Found a slider to adjust.
                 else:
                     self.values[f'face{next_unlocked_face}'] = 100 - active_slider_value
                     self.window[f'face{next_unlocked_face}'].update(self.values[f'face{next_unlocked_face}'])
 
-            # The unlocked sliders were all 0 and the active slider was increased; decrease active slider
+            # The unlocked sliders were all 0 and the active slider was increased; decrease active slider.
             elif unlocked_sum == 0 and total > 100:
                 adjustment = 100 - total
                 slider_values[active_face - 1] += adjustment
                 self.window[active_slider_key].update(slider_values[active_face - 1])
 
-            # Finished moving, update related objects
+            # Finished moving, update related objects.
             self.mean_and_deviation(slider_values)
             self.die_distribution = [_ for _ in slider_values]
             self.convolution = Convolution(self)
@@ -310,6 +357,10 @@ class Mainframe:
 
 
     def dice_change(self, value=None):
+        """
+        Method to keep track of the amount of dice entered. Only allows positive integers to be entered.
+        Updates the title of the Convolution graph and creates a new Convolution. 
+        """
         if value is None:
             value = self.dice
         # inheritance
@@ -342,43 +393,53 @@ class Mainframe:
 # ----------------------------------------------------------------------------------------------------------------------
 class Convolution:
     def __init__(self, frame: Mainframe):
-        if frame.con_graph is None:
+        """
+        An object that lives in a `Mainframe`. It creates a convoluted probability distribution out of `Bar` objects
+        """
+        # Inheritance
+        if frame.con_graph is None:  # When the frame is instantiated, the window and graph have not yet been created.
             print('Making Convolution', end='... ')
-        self.f = frame
-        if frame.sim:
-            self.f.sim.deselect_all_bins()
-        self.bins: list[Bar] = []
-        self.die_dist = frame.die_distribution
-        self.graph = frame.con_graph
+        self.f: Mainframe = frame
+        self.graph: sg.Graph = frame.con_graph
+        self.die_dist: list[int|float] = frame.die_distribution
+        # Ensure the die distribution has a sum of 1. The frame uses a distribution that sums to 100.
         if sum(self.die_dist) != 1:
             self.die_dist = [x / sum(self.die_dist) for x in self.die_dist]
         else:
             self.die_dist = self.die_dist
         self.number_of_dice = self.f.dice
-        # all possible outcomes
-        self.possible_outcomes = list(range(self.number_of_dice, (6 * self.number_of_dice) + 1))
+
+        # If a new convolution is being made, then the theoretical prediction won't match the simulation, no point comparing columns.
+        self.f.matching_graphs = False
+        if frame.sim:  
+            self.f.sim.deselect_all_bins()
+
+       # Self
+        self.possible_outcomes = list(range(self.number_of_dice, (6 * self.number_of_dice) + 1))  # all possible outcomes
         self.conv_dist = self.create_convoluted_distribution(get_var=True)
-        self.mean, self.deviation = self.f.mean_and_deviation(self.conv_dist, update=False, dice=self.number_of_dice)
-        self.leftmost_bin: int = None
-        self.rightmost_bin: int = None
-        self.highest_point: int | float = None
+        self.highest_point: int | float = None  # largest y-value that is allowed to draw bars on
         self.bin_width = 1
-        self.scalar = 1
+        self.scalar = 1                         # Scaling factor used to scale the pixel size of each probability
+        self.bins: list[Bar] = []               # list of all the bars
         if self.graph:
-            self.make_bars()
-        self.selection_box_id = None
-        self.current_selection = None
-        self.selected_bar_display_ids = []
+            # The make_bars() method does many things. It finds an appropriate box size, creates the drawing area, and trims the outcomes.
+            self.make_bars()  
+
+        # Selection IDs and control
+        self.current_selection = None       # The bin number of the currently selected bin
+        self.selection_box_id = None        # Needs to be tracked separately so that the Simulation can delete it.
+        self.selected_bar_display_ids = []  # The figures displayed on the convolution graph
         
 
     def create_convoluted_distribution(self, dice=None, get_var=False):
+        """
+        Uses numpy to convolve the die distribution with itself `number_of_dice` times.
+        """
         if dice is None:
             dice = int(self.number_of_dice)
         convoluted_distribution = self.die_dist
         for _ in range(dice - 1):
             convoluted_distribution = np.convolve(convoluted_distribution, self.die_dist)
-        # all possible outcomes
-        outcomes = list(range(dice, 6 * dice))
         if get_var:
             return convoluted_distribution
         else: 
@@ -386,6 +447,10 @@ class Convolution:
 
 
     def trim_outcomes(self):
+        """
+        Trims the list of all possible outcomes. Only allows outcomes that would use more than 0.1 px to display.
+        Searches from both left and right for the first thing that would require more than 0.1 px to display. 
+        """
         feasible_outcomes = self.possible_outcomes
         distribution = self.conv_dist
         
@@ -425,7 +490,8 @@ class Convolution:
         highest_probability = max(self.conv_dist)
         self.highest_point = self.top_right[1] - 45
         self.scalar = self.highest_point / highest_probability
-        self.trim_outcomes()
+        if self.number_of_dice > 4:
+            self.trim_outcomes()
         bins = len(self.conv_dist)
         self.bin_width = self.top_right[0] // bins
     
@@ -477,6 +543,9 @@ class Convolution:
 # ----------------------------------------------------------------------------------------------------------------------
 class DieFace:
     def __init__(self, graph: sg.Graph, images, stack_position, x=-73, y=55, y_sep=40):
+        """
+        Each DieFace knows all 6 die face images and can swap between them.
+        """
         self.stack_position = stack_position
         self.face_number = 1
         self.graph = graph
@@ -520,11 +589,11 @@ class DieFace:
 class Simulation:
     def __init__(self, frame: Mainframe):
         print('\nBeginning the simulation, enjoy!')
-        # inheritance
+        # Inheritance
         try:
             self.f: Mainframe = frame
             self.graph: sg.Graph = self.f.window['simulation graph']
-            self.dist: list[float] = [x / 100 for x in self.f.die_distribution]
+            self.dist: list[float] = [x / 100 for x in self.f.die_distribution]  # die distribution, normalized to 1
             self.number_of_dice: int = int(self.f.dice)
             self.number_of_rolls: int = int(self.f.values['rolls'])
             if int(self.number_of_rolls) < 1:
@@ -535,29 +604,39 @@ class Simulation:
         except:
             print("Cancelling... Could not gather the required inputs.")
             raise ValueError("Inputs must be positive integers.")
+        
         # Self
-        # self.f.window['log'].update(value='')
-        self.f.window['sim column'].Widget.canvas.yview_moveto(1.0)
+        self.graph.erase()
+        self.f.window['sim column'].Widget.canvas.yview_moveto(1.0)  # adjust the graph slider to be at the bottom
         self.f.window['Pause'].update(text='Pause')
-        self.selection_box_id = None
-        self.partition = self.make_partition()
-        self.possible_outcomes = self.f.convolution.possible_outcomes
-        self.outcome_counter: dict[int: int] = {}
+        self.trial_number = 1
+        self.f.matching_graphs = True
+
+        self.possible_outcomes = self.f.convolution.possible_outcomes  # Must have own copy so that the convolution is free to change
+        self.convolution: list[float] = self.f.convolution.conv_dist  # the distribution as a list, not the entire object
+        self.outcome_counter: dict[int, int] = {outcome: 0 for outcome in self.possible_outcomes}
+        self.partition = self.make_partition()  # partition the closed set [0, 1] according to the die distribution, used for rolling
+
+        # Possible redundancy, but we keep two copies of all the rolls.  One is a list ordered by trial number,
+        #   the other is a dictionary with a key for each possible outcome.
+        # The list is used for hit detection, the dictionary is used for column selection.
+        # Hit detection could be optimized to use the dictionary and only search the bins of the corresponding x-range but would make the function less general.
         self.rolls: list[Roll] = []
         self.bin_dictionary: dict[int, list[Roll]] = {outcome: [] for outcome in self.possible_outcomes}  # for bin, outcomes in self.bin_dictionary.items(): ...
-        self.convolution: list[float] = self.f.convolution.conv_dist 
-        self.outcome_counter = {outcome: 0 for outcome in self.possible_outcomes}
-        # Drawing area from (0, 0) to (x - 125 - 100, y - 50 - 50)
-        # Current Drawing Area, (x, y) = (1000, 400) ==> (0, 0) to (775, 300)
-        self.top_right = (self.f.sim_graph_size[0] - sum(self.f.sim_margins[0]), self.f.sim_graph_size[1] - sum(self.f.sim_margins[1]))
+
+        # Drawing area from (0, 0) to (xMax - left_margin - right_margin, yMax - top_margin - bottom_margin)
+        self.top_right = (self.f.sim_graph_size[0] - sum(self.f.sim_margins[0]),  # x-coord
+                          self.f.sim_graph_size[1] - sum(self.f.sim_margins[1]))  # y-coord
         self.box_width, self.box_height = self.find_box_size()
-        self.drawing_area()
-        self.die_faces: list[DieFace] = None
-        self.draw_dice()
+        self.drawing_area()  # Requires knowledge of the box sizes for x-tick & y-tick locations.
+        self.die_faces: list[DieFace] = None  # The DieFace objects that display the current, or currently displaying roll.
+        self.draw_dice()                      # Populates `self.die_faces` and draws them.
+
+        # Display
+        self.selection_box_id = None
         self.display_ids: list = []
         self.column_outline_ids = []
         self.displaying_roll = False
-        self.trial_number = 1
         self.selected_bin = self.f.convolution.current_selection
         if self.selected_bin:
             self.draw_column_outlines(self.selected_bin - self.possible_outcomes[0])
@@ -565,25 +644,31 @@ class Simulation:
 
     def drawing_area(self):
         self.graph.draw_rectangle((0,0), self.top_right)
+
         # Draw y-axis tick marks, labels, and grid lines
         y_tick_diff = self.number_of_rolls // 15 
-        y_tick_diff = round(y_tick_diff / 5) * 5 if self.number_of_rolls > 44 else 5  # closest multiple of 5 to one tenth of the max rolls
+        y_tick_diff = round(y_tick_diff / 5) * 5 if self.number_of_rolls > 44 else 5  # closest multiple of 5 to one fifteenth of the max rolls
         delta_y = y_tick_diff * self.box_height  # height difference in pixels
         y_tick_height = 0
         y_tick = 0
         while y_tick_height < self.top_right[1]:
+            # format the tick label
             string_length = len(str(self.number_of_rolls)) if self.number_of_rolls > 100 else 3
             tick_string = f'{y_tick:>{string_length}}'
+            # drawing
             self.graph.draw_line((-8, y_tick_height), (0, y_tick_height))
             self.graph.draw_line((0, y_tick_height), (self.top_right[0], y_tick_height), color='#dcdcdc')
             self.graph.draw_text(tick_string, location=(-(len(tick_string) * 6.33) , y_tick_height))  # 6.33 is an approximate conversion factor for 10pt to px
             y_tick_height += delta_y
             y_tick += y_tick_diff
+
         # Draw x-axis tick marks and labels
-        x_tick_diff = len(self.possible_outcomes) // 5  # ensures there are always 6 tick labels
+        # X-tick labels is tricky since the number of outcomes is no longer predictable (we trim the outliers).
+        # Without trimming, the range of outcomes is [n, 6n], meaning the difference is always divisible by 5.
+        x_tick_diff = len(self.possible_outcomes) // 5  # ensures there are a maximum of 6 tick labels, minimum 5.
         for i, bin in enumerate(self.possible_outcomes):
             box_center = self.box_width * (i + 0.5)
-            self.graph.draw_line((box_center, -1), (box_center, -10))   # box_center = self.box_width * (i + 0.5)
+            self.graph.draw_line((box_center, -1), (box_center, -10))
             if i % x_tick_diff == 0:
                 self.graph.draw_text(f'{bin}', location=(box_center, -15))
 
@@ -607,12 +692,15 @@ class Simulation:
 
     
     def deselect_all_bins(self):
-        if self.selected_bin:
+        if self.selected_bin:  # ensure that a bin was actually selected
             self.selected_bin = None
             for roll in self.rolls:
                 self.graph.Widget.itemconfig(roll.id, fill='cyan')
-            self.graph.Widget.itemconfig(self.rolls[-1], fill='green')  # ensure the final roll is still green
             self.column_outline_ids = self.delete_ids(self.column_outline_ids)
+        if self.f.convolution.selection_box_id:
+            self.f.con_graph.delete_figure(self.f.convolution.selection_box_id)
+            self.f.convolution.selection_box_id = None
+        self.graph.Widget.itemconfig(self.rolls[-1], fill='green')  # ensure the final roll is still green
 
 
     def delete_ids(self, id_list=None):
@@ -636,20 +724,20 @@ class Simulation:
 
     
     def find_box_size(self):
-        # should be a smooth function from 3px to x% of drawing area
-        drawing_window_height = int(630 * 0.75)
+        # should be a smooth function from 2px to x% of drawing area
+        viewing_window_height = int(self.f.sim_viewing_height * 0.75)  
         highest_probability = float(max(self.convolution))
         print(f'{highest_probability = }', end=" : ")
         approx_most_outcomes = self.number_of_rolls * highest_probability * 1
         approx_most_outcomes = int(approx_most_outcomes) if approx_most_outcomes > 1 else 1
         print(f'{approx_most_outcomes = }')
-        box_height = drawing_window_height // approx_most_outcomes
+        box_height = viewing_window_height // approx_most_outcomes
         worst_case_px_size = approx_most_outcomes * box_height
         print(f"{worst_case_px_size = }")
         if box_height < 2:
             box_height = 2
-        if box_height > 0.10 * drawing_window_height:
-            box_height = 0.075 * drawing_window_height
+        if box_height > 0.10 * viewing_window_height:
+            box_height = 0.075 * viewing_window_height
         box_width = self.top_right[0] // len(self.convolution)
         print(f'{box_width = }, {box_height = }')
         return box_width, box_height
@@ -695,6 +783,8 @@ class Simulation:
 # ----------------------------------------------------------------------------------------------------------------------
 class Roll:
     def __init__(self, sim: Simulation, roll_number: int, partition, counter, box_size, graph, dice, previous_roll):
+        # rolls all the dice and creates a Roll object according to the outcome
+        # Inheritance
         self.sim: Simulation = sim
         self.roll_number: int = roll_number
         self.box_width: int | float = box_size[0]
@@ -703,6 +793,7 @@ class Roll:
         self.dice: int = dice  # number of dice to be thrown
         self.prev_roll: Roll = previous_roll
 
+        # Rolling
         outcome: list = [0] * 6
         self.individual_outcomes: list = []
         for i in range(dice):
@@ -710,7 +801,7 @@ class Roll:
             for j in range(7):
                 if partition[j] <= roll < partition[j + 1]:
                     outcome[j] += 1
-                    try:
+                    try:  # set the images and record the individual outcomes
                         if not self.sim.displaying_roll:
                             sim.die_faces[i].set_image(j + 1)
                         self.individual_outcomes.append(j + 1)
@@ -719,24 +810,28 @@ class Roll:
                         raise TypeError
         this_sum: int = np.dot(outcome, [1, 2, 3, 4, 5, 6])
 
-        try:
+        try:  # the roll landed in a displayed bin, create and draw the Roll
             counter[this_sum] += 1
             self.frequency = counter[this_sum]
+            self.sum = this_sum  # X-coord in grid squares
+            self.outcome = outcome
+
             # bottom left corner in pixels
             y_coord = (counter[this_sum] - 1) * self.box_height  
             x_coord = (this_sum - self.sim.possible_outcomes[0]) * self.box_width
-            self.outcome = outcome
-            self.sum = this_sum  # X-coord in grid squares
             self.px_coord = (x_coord, y_coord)
-            self.grid_coord = (self.sum - dice, self.frequency - 1)
             self.hitbox = self.make_hitbox()
+
             self.id: int
             self.draw_roll(*self.hitbox)
             if not self.sim.displaying_roll:
                 self.display(set_faces=False)
-        except KeyError as ke:
+
+        # TODO Outliers are not properly handled, the object still needs to be instantiated in some way
+        # As it is, outliers are *very* rare but crash the program.
+        except KeyError as ke:  
             print(f'{this_sum = }\n{counter = }\n\n{ke}')
-            sg.popup_quick_message(f'Outlier encountered: {this_sum}', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=1, grab_anywhere=True)
+            sg.popup_quick_message(f'Outlier encountered: {this_sum}', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=1, grab_anywhere=True, keep_on_top=True)
 
 
     def make_hitbox(self):
@@ -751,7 +846,7 @@ class Roll:
             t_l = (0, self.box_height)
         if b_r is None:
             b_r = (self.box_width, 0)
-        if self.prev_roll:
+        if self.prev_roll:  # change the previous roll to 'cyan' if its column isn't being highlighted. If it is, 'RoyalBlue' instead.
             previous_box_id = self.prev_roll.id
             box_color = 'Royal Blue' if self.prev_roll.sum == self.sim.selected_bin else 'cyan'
             self.graph.TKCanvas.itemconfig(previous_box_id, fill=box_color)
@@ -787,9 +882,6 @@ class Roll:
         self.sim.display_ids.append(self.graph.draw_text(self.sum, location=(-62, 0), color='black', font='_ 16 bold'))
         self.sim.display_ids.append(self.graph.draw_text(text=f"Roll: {self.roll_number}", location=(-84, -40),
                                                          text_location=sg.TEXT_LOCATION_LEFT, color='magenta', font='_ 16 bold'))
-
-        # self.graph.draw_line((-40, 0), (-84, 0))
-        # x=-73, y=35, y_sep=40
 
         
     def __repr__(self) -> str:
@@ -870,15 +962,21 @@ class Bar:
         self.conv.current_selection = self.bin
         self.conv.delete_ids()  # default is these selection ids
         self.conv.selected_bar_display_ids.append(self.graph.draw_text(
-                text=f"Sum: {self.bin}  |  p = {self.probability:.4f}", location=(10, self.conv.top_right[1] - 25), 
+                text=f"Sum: {self.bin}  |  p = {self.probability:.4f}", location=(8, self.conv.top_right[1] - 15), 
                 color='magenta', font='_ 14 bold', text_location=sg.TEXT_LOCATION_LEFT
             )
         )
+        expected_rolls = int(int(self.conv.f.values['rolls']) * self.probability)
+        self.conv.selected_bar_display_ids.append(self.graph.draw_text(
+                text=f"{expected_rolls} Expected Occurrences", location=(425, self.conv.top_right[1] - 12), 
+                color='black', font='_ 12 bold', text_location=sg.TEXT_LOCATION_RIGHT
+            )
+        )
         
-        # highlight all the rolls in the currently displaying bin of the simulation
+        # highlight all the rolls in the currently displaying bin, on the simulation
         if self.conv.f.sim:
             sim: Simulation = self.conv.f.sim  # this bar lives in a convolution, which is housed in a frame. the frame has a simulation.
-            if len(sim.bin_dictionary) == len(self.conv.possible_outcomes):
+            if self.conv.f.matching_graphs:
                 previous_bin = sim.selected_bin
                 sim.selected_bin = self.bin
                 sim.select_bin(previous_bin)

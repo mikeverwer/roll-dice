@@ -1,22 +1,16 @@
 #!/usr/bin/env python
 import PySimpleGUI as sg
 import random
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import matplotlib
 import webbrowser
 # required files
 import classes as cl
 import make_window as make
 
-matplotlib.use('TkAgg')
 
+# Close the splash screen.
 try:
     import pyi_splash
-    # Close the splash screen. It does not matter when the call
-    # to this function is made, the splash screen remains open until
-    # this function is called or the Python program is terminated.
     pyi_splash.close()
 except:
     pass
@@ -54,78 +48,15 @@ class image_data:
 
 
 images = image_data()
-# ----------------------------------------------------------------------------------------------------------------------
-# Making MatLab plots
-# ----------------------------------------------------------------------------------------------------------------------
-
-def create_histogram(outcomes, die_rolled, trials):
-    if (0.015 * die_rolled) < 0.99:
-        width = 1 - 0.015 * die_rolled
-    else:
-        width = 0.99
-
-    plt.hist(outcomes, bins=range(1, max(outcomes) + 1), align='left', rwidth=width)
-    plt.xlabel('Sum of Dice Rolled')
-    plt.ylabel('Frequency of Sum')
-    plt.title(f'Results of Simulation: Rolling {die_rolled} Dice, {trials} Times')
-    plt.xlim(die_rolled - 1, 6 * die_rolled + 1)
-
-
-def create_convoluted_distribution_plot(distribution, number_of_dice, mean, deviation):
-    # all possible outcomes
-    outcomes = list(range(number_of_dice, 6 * number_of_dice + 1))  
-
-    if (0.015 * number_of_dice) < 0.99:
-        width = 1 - 0.015 * number_of_dice
-    else:
-        width = 0.99
-
-    plt.bar(outcomes, distribution, width=width, align='center')
-    plt.xlabel(f'Sum of {number_of_dice} Dice')
-    plt.ylabel('Probability')
-    plt.title(f'Probability Distribution of the Sum of {number_of_dice} Dice')
-    plt.ylim(0, max(distribution) + 0.2 * max(distribution))
-
-    # Draw vertical line at the mean
-    plt.axvline(x=mean, color='r', label="mu")
-    plt.annotate(fr"    $\mu$ = {mean:.2f}", xy=(mean, max(distribution) + 0.1 * max(distribution)),
-                 xytext=(mean, max(distribution) + 0.1 * max(distribution)), ha='center', va='bottom')
-
-    # Draw vertical lines 1 standard deviation from the mean
-    plt.axvline(x=mean + deviation, color='g')
-    plt.axvline(x=mean - deviation, color='g')
-    plt.annotate(fr"    $\sigma$ = {deviation:.2f}",
-                 xy=(mean + deviation, max(distribution) + 0.05 * max(distribution)),
-                 xytext=(mean + deviation, max(distribution) + 0.05 * max(distribution)), ha='left', va='bottom')
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# Matlab helper code for GUI
-# ----------------------------------------------------------------------------------------------------------------------
-def draw_figure(canvas, figure):
-    figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
-    figure_canvas_agg.draw()
-    figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=0)
-    return figure_canvas_agg
-
-
-def clear_canvas(canvas_agg):
-    canvas_agg.get_tk_widget().destroy()  # Destroy the existing canvas
-    plt.close()
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 def error_popup(error, message, duration=5):
-    sg.popup_quick_message(f'\n{error}\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=duration, grab_anywhere=True)
+    sg.popup_quick_message(f'\n{error}\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=duration, grab_anywhere=True, keep_on_top=False)
 
-
-###########################################################################################################################
-###########################################################################################################################
 # -------------------------------------------------------------------------------------------------------------------------
 #   Beginning of GUI Code
 # -------------------------------------------------------------------------------------------------------------------------
-###########################################################################################################################
-###########################################################################################################################
 def main():
     # ---------------------------------------------------------------------------------------------------------------------
     # Initialize Window
@@ -134,13 +65,10 @@ def main():
     mf = cl.Mainframe(images)  # MainFrame object, see classes.py
     window = make.Mainframe_func(sg, images, theme='Default1', frame=mf)
     size = mf.window.size
-    mf.resize_graphs()
+    # mf.resize_graphs()
 
-    fig_canvas_matlab_convolve = None
-    fig_canvas_agg_simulated = None
     logging = False
     full_logging = False
-    mf.sim = None
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Event Loop
@@ -150,7 +78,6 @@ def main():
         event, mf.values = mf.window.read(timeout = 1000 // mf.update_interval)
         mf.sim_graph = mf.window['simulation graph']
         mf.con_graph = mf.window['convolution graph']
-        mf.convolution.graph = mf.con_graph
 
         # log events and handle closing
         if event not in (sg.TIMEOUT_EVENT, sg.WIN_CLOSED):
@@ -204,6 +131,9 @@ def main():
             mf.window.LoadFromDisk(filename)
             # load(form)
 
+        elif event == 'Clear':
+            mf.window['log'].update(value='')
+
         elif event.startswith('face'):
             mf.activate_slider(event=event)
             mf.window['rolls'].set_focus()
@@ -246,9 +176,7 @@ def main():
                 if int(mf.values['dice']):
                     # Run the simulation
                     mf.simulate = True
-                    mf.window['simulation graph'].erase()
                     mf.sim = cl.Simulation(mf)
-
             except ValueError as ve:
                 mf.simulate = False
                 error_popup('Value Error', ve)
@@ -262,7 +190,7 @@ def main():
             try:
                 hit_bin: cl.Bar = None
                 mf.convolution.selection_box_id, hit_bin = mf.activate_hit_detect(
-                    click=mf.values[event], graph=mf.convolution.graph, event=event,
+                    click=mf.values[event], graph=mf.con_graph, event=event,
                     objects=mf.convolution.bins, prev_selection=(mf.convolution.selection_box_id, None),
                     offset=(0, 15)
                 )
@@ -298,8 +226,7 @@ def main():
                     if len(outcomes) > max_length:
                         max_bin = bin
                         max_length = len(outcomes)
-                error_popup('Finished!', f'The sum with the most outcomes was {max_bin},\nwhich was rolled {max_length} times.')
-                # mf.window['dice gif'].update(data=None)
+                error_popup('Finished!', f'The sum with the most outcomes was {max_bin},\nwhich was rolled {max_length} times.', duration=4)
 
     # end of event loop
     mf.window.close()
