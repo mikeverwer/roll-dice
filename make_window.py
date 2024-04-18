@@ -4,6 +4,8 @@ import classes as cl
 def update_frame(window: sg.Window, frame: cl.Mainframe):
     f: cl.Mainframe = frame
     f.window = window
+
+    # Window and graph sizing
     f.window.set_min_size((810, 765))
     screen_width, screen_height = sg.Window.get_screen_size()
     f.window.size = ((0.85 * screen_width, 0.75 * screen_height))
@@ -14,11 +16,16 @@ def update_frame(window: sg.Window, frame: cl.Mainframe):
     f.convolution.graph = f.con_graph
     f.convolution.make_bars()
 
+    # Initialize the maestro
+    f.maestro = cl.EventHandler(frame)
+
     # drag-anywhere exclusions
     drag_exclusions = ['convolution graph', 'simulation graph', 'Pause', 'go', 'add preset', 'Randomize', 'up', 'down']
     drag_exclusions += [f'face{i}' for i in range(1, 7)] + [f'lock{j}' for j in range(1, 7)]
     for item in drag_exclusions:
         f.window[f'{item}'].grab_anywhere_exclude()
+    
+
 
 
 def do_binds(window, button_images):
