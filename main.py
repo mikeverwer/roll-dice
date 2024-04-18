@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# .requirements
 import PySimpleGUI as sg
 import random
 import numpy as np
@@ -7,22 +8,12 @@ import webbrowser
 import classes as cl
 import make_window as make
 
-
-# Close the splash screen.
+# Close the splash screen. Only runs if the program runs from an executable.
 try:
     import pyi_splash
     pyi_splash.close()
 except:
     pass
-
-
-
-images = image_data()
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-def error_popup(error, message, duration=5):
-    sg.popup_quick_message(f'\n{error}\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=duration, grab_anywhere=True, keep_on_top=False)
 
 # -------------------------------------------------------------------------------------------------------------------------
 #   Beginning of GUI Code
@@ -31,20 +22,15 @@ def main():
     # ---------------------------------------------------------------------------------------------------------------------
     # Initialize Window
     # ---------------------------------------------------------------------------------------------------------------------
-    sg.theme('Default1')
     # Build the Mainframe, see classes.py -> Mainframe
-    mf = cl.Mainframe(images) 
-    mf.window = make.Mainframe_func(sg, images, theme='Default1', frame=mf) 
-    # size = mf.window.size
-
-
-    # logging = False
-    # full_logging = False
+    mf = cl.Mainframe() 
+    # Make_Mainframe() makes the window that the frame uses.  It creates the layout for the window and calls sg.Window().
+    #   After the window is made, it instantiates the graphs and the EventHandler then returns the sg.Window.
+    mf.window = make.make_Mainframe(sg, theme='Default1', frame=mf)
 
     # ----------------------------------------------------------------------------------------------------------------------
     # Event Loop
     # ----------------------------------------------------------------------------------------------------------------------
-
     while True:
         event, mf.values = mf.window.read(timeout = 1000 // mf.update_interval)
         run_again = mf.maestro.handle(event)

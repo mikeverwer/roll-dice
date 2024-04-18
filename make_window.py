@@ -1,4 +1,4 @@
-import PySimpleGUI as sg
+import PySimpleGUI as sg  # imported to facilitate type-hints only, an sg object is passed to make_Mainframe
 import classes as cl
 
 def update_frame(window: sg.Window, frame: cl.Mainframe):
@@ -10,6 +10,7 @@ def update_frame(window: sg.Window, frame: cl.Mainframe):
     screen_width, screen_height = sg.Window.get_screen_size()
     f.window.size = ((0.85 * screen_width, 0.75 * screen_height))
     f.resize_graphs()
+    window['sim column'].Widget.canvas.yview_moveto(1.0)
 
     # initialize convolution graph
     f.con_graph = f.window['convolution graph']
@@ -35,7 +36,7 @@ def do_binds(window, button_images):
     window.bind("<Configure>", "resize")
 
 
-def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
+def make_Mainframe(sg: sg, theme, frame: cl.Mainframe):
     sg.theme(theme)
 
     # ----------------------------------------------------------------------------------------------------------------------
@@ -166,8 +167,8 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
     
     hoverable_buttons = ['author', 'menubar_CLT']
     menu_def = [
-        [sg.Image(data=images.menubar1), sg.Image(data=frame.images.menubar_CLT, enable_events=True, key=('hover', 'menubar_CLT')), sg.Image(data=images.menubar2), 
-         sg.Push(), sg.Image(data=images.menubar1_r), sg.Image(data=images.author, enable_events=True, key=('hover', 'author'))]
+        [sg.Image(data=frame.images.menubar1), sg.Image(data=frame.images.menubar_CLT, enable_events=True, key=('hover', 'menubar_CLT')), sg.Image(data=frame.images.menubar2), 
+         sg.Push(), sg.Image(data=frame.images.menubar1_r), sg.Image(data=frame.images.author, enable_events=True, key=('hover', 'author'))]
     ]
 
     # sim_layout += sim_inter_layout
@@ -195,7 +196,6 @@ def Mainframe_func(sg: sg, images: dict, theme, frame: cl.Mainframe):
         border_depth=0, icon=frame.images.lock6, resizable=True, location=(0, 0), size=(int(0.85 * screen_width), int(0.75 * screen_height)))  # was (60, 1)
     do_binds(window, hoverable_buttons)
     update_frame(window, frame)
-    window['sim column'].Widget.canvas.yview_moveto(1.0)
     
     # ----------------------------------------------------------------------------------------------------------------------
     # Hotkeys
