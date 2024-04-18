@@ -10,7 +10,7 @@ import make_window as make
 
 # Close the splash screen. Only runs if the program runs from an executable.
 try:
-    import pyi_splash
+    import pyi_splash # type: ignore
     pyi_splash.close()
 except:
     pass
@@ -19,9 +19,6 @@ except:
 #   Beginning of GUI Code
 # -------------------------------------------------------------------------------------------------------------------------
 def main():
-    # ---------------------------------------------------------------------------------------------------------------------
-    # Initialize Window
-    # ---------------------------------------------------------------------------------------------------------------------
     # Build the Mainframe, see classes.py -> Mainframe
     mf = cl.Mainframe() 
     # Make_Mainframe() makes the window that the frame uses.  It creates the layout for the window and calls sg.Window().
