@@ -7,8 +7,8 @@ import webbrowser
 """
 The classes required for the Roll Dice simulation window.  The utilization of the classes is described below.
 
-A `Mainframe` houses the window sg object and the values dictionary, the convolution of the `n` die, as well as 
-the simulation of the rolls.
+A `Mainframe` houses the sg.Window object and the values dictionary, the convolution of the `n` die, as well as 
+the simulation of the rolls.  It also has an `EventHandler` to handle the events from window.read().
 
 A `Convolution` is an object that has a convoluted distribution graph with each of the bars of the graph being
 their own individual `Bar` objects.  This is the theoretical probability distribution for rolling the `n` dice.
@@ -17,8 +17,9 @@ The `Simulation` class controls the entire simulation. It is invoked as an objec
 incremented there.  The simulation creates `Roll` objects and draws them on the graph.  
 Each `Roll` is remembered by the `simulation` and, when selected, will display the outcome of each die rolled.
 
-Note: A `simulation` requires a `mainframe` as an initializing variable, so it can only be created AFTER the
-    mainframe has been fully instantiated. Whereas the `mainframe` instantiates its own `convolution`.  
+Note: A `Simulation` requires a `Mainframe` and information about the `Convolution` to be instantiated, so it 
+    can only be created AFTER the Mainframe has been fully instantiated. Whereas the `mainframe` instantiates 
+    its own `convolution`.  
 
 The figure below is a usage network, NOT a class structure tree.
 
@@ -56,6 +57,26 @@ class EventHandler:
 
 
     def handle(self, event) -> bool:
+        """
+        Handles the event from Window.read()
+        Returns: - False if the window has been closed, triggers the end of the event loop in main.py.
+                 - True otherwise.
+        List of events - Read as follows: event key - description of outcome
+            exit, sg.WINDOW_CLOSED
+            (hover, key) for key in hover_images - change the buttons image data to the hover/non-hover version or click the button
+            resize, <Configure> - resize the window
+            Clear - clears log
+            face[number] - slider representing die face [number] has been moved, activate all sliders
+            lock[number] - lock/unlock the slider for die face [number] and change the icon of the button
+            preset - set the slider to one of preset distributions
+            add preset - add the current slider configuration to the list of preset distributions
+            Randomize - generate a random distribution for a d6 and set the sliders to it
+            up, down, dice - change the number of dice to throw
+            go - start the simulation
+            Pause - pause/play the simulation
+            convolution graph - clicked the convolution graph, activate hit detection/outcome
+            simulation graph - clicked the simulation graph, activate hit detection/outcome
+        """
         mf = self.mf
         size = None
 
@@ -265,11 +286,15 @@ class ImageData:
         self.exit_hover = b'iVBORw0KGgoAAAANSUhEUgAAACYAAAATCAYAAAD8in+wAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAZhJREFUSIndlk1LAlEUhp+5CqOTBcrURqhf0KpVuIkwgpCohSDRB/QLot8Qrlq0LggsaFNgIASZuAuXQRG4aRUuKkkCGx3UmRZROGOhDTSF7+6e+97Dwz2Hc68EmPxDee2BQQRBPK5ClGmi2e7HAhbCQ4FRFCRXwaoYTHHPA63PmGg3hPG6DgUQQDBiK574xvvn6i8wKaD8irddjsCCu0nUbAolEUPyyZ0wPhklEUPNpgjuJh2BSbTNsXFkzgh3PyUE8vQkA6uLyNEI9Uwe7TCNUXlBWVlEWV6gcXXL60GaWvocmq2uKecocYP+ue6YYz3JMNBzl+i5S7xjYYa2NlHPU+AR6PkCT9EVmsU7R6k/5Kz5hUCORggdbDNcOMHU6pRn13icmKdxXWQ4d4ia2cMfnwOvs2HtqJShox2EGkTbP6Z2eoFZ1y37kk/GvzCDsh7HKFd4XtromtNeSkdgUkDBrGpdfT/x2sEclbJXqJ9629VfA9YNWcBKX3w/3JCGSYmmJWZpfnh/6UMu/8eeaVHFsMQ6wP6L3gCof32hmi+c+gAAAABJRU5ErkJggg=='
 
 class Mainframe:
-    def __init__(self, window=None, values={}):
+    def __init__(self):
+        """
+        The main object.  
+        Houses everything and has methods that facilitate most of the directions given by the EventHandler.
+        """
         print('[LOG] Initializing frame... ', end='')
         # Inheritance
-        self.window = window
-        self.values = values
+        self.window: sg.Window = None
+        self.values: dict = {}
         
         # Self
         self.images = ImageData()
@@ -278,26 +303,26 @@ class Mainframe:
         self.maestro: EventHandler = None
 
         # Initializing frame variables
-        self.preset_list = ['Fair', 'Sloped', 'Valley', 'Hill', 'Alternating']
-        self.presets = {
+        self.preset_list: list[str] = ['Fair', 'Sloped', 'Valley', 'Hill', 'Alternating']
+        self.presets: dict = {
                'Fair': [float(100 / 6), float(100 / 6), float(100 / 6), float(100 / 6), float(100 / 6), 100 - float(500 / 6)],
                'Sloped': [47, 23, 16, 8, 4, 2],
                'Valley': [40, 8, 2, 3, 9, 38],
                'Hill': [2, 12, 40, 38, 7, 1],
                'Alternating': [32, 0, 32, 0, 32, 4],
         }
-        self.dice = 1  # number of dice
+        self.dice: int = 1  # number of dice
 
         # Controlling variables
-        self.update_interval = 64       # controls framerate / speed of simulation
-        self.simulate = False           # turns the simulation on or off (pause/play)
-        self.matching_graphs = False    # if the graphs match, we can select and compare columns between sim. and conv.
+        self.update_interval: int = 64        # Controls framerate / speed of simulation
+        self.simulate: bool = False           # Turns the simulation on or off (pause/play)
+        self.matching_graphs: bool = False    # If the graphs match, we can select and compare columns between sim. and conv.
 
         # Graph dimensions and margins
         # Simulation graph
         self.sim_margins: list[list[int]] = [[100, 20], [75, 50]]  # (left, right), (bottom, top)
-        self.sim_graph_size: tuple[int, int] = (1000, 10000)       # the height extends far past what is shown to allow for many rolls, the values get overridden in make_window
-        self.sim_viewing_height: int = None                        # height of the simulation graph that gets displayed
+        self.sim_graph_size: tuple[int, int] = (1000, 10000)       # The height extends far past what is shown to allow for many rolls, the values get overridden in make_window
+        self.sim_viewing_height: int = None                        # Height of the simulation graph that gets displayed
         self.sim_graph: sg.Graph = None                            # Gets initialized by make_window.py in the update_window() function
         # Convolution graph
         self.con_margins: list[list[int]] = [[10, 10], [25, 10]]   # (left, right), (bottom, top)
@@ -316,8 +341,8 @@ class Mainframe:
 
         # Initialize Convolution
         self.convolution_title = f' The Probability Distribution for the Sum of {self.dice} Dice '
-        self.convolution: Convolution = Convolution(self)  # requires a frame as a parameter
-        self.convolution_display_ids = []                  # Figure ID's for the figures of the bar display method on the convolution graph
+        self.convolution: Convolution = Convolution(self)  # Requires a frame as a parameter
+        self.convolution_display_ids: list = []            # Figure ID's for the figures of the bar display method on the convolution graph
 
         print(f'Complete!\n')
 
@@ -325,7 +350,7 @@ class Mainframe:
     def resize_graphs(self):
         """
         The graphs do not actually get resized.  When initialized, the graph has a width and view height that fill the available screen size. 
-        This function re-defines the drawing area of the simulation to fit in the new window size.
+        This function re-defines the allowed drawing area of the simulation to fit in the new window size.
         """
         window_size = self.window.size
         self.sim_graph_size = (window_size[0] - 475, 10_000)
@@ -400,10 +425,24 @@ class Mainframe:
 
     
     def activate_hit_detect(self, click, graph: sg.Graph, event: str, objects: list[object], 
-                            prev_selection: tuple[int, object] = (None, None), offset: tuple[int, int] = (0, 0)):        
+                            prev_selection: tuple[int, object] = (None, None), offset: tuple[int, int] = (0, 0)): 
+        """
+        Searches through the given list of objects to see if the click location is inside of one of their hitboxes.
+        If an object is it, its display() method is called and a selection box is drawn on top of it.
+        Returns the object and its ID, or None.
+
+        :param click: Type - tuple: graph coordinates of the click
+        :param graph: Type - PySimpleGUI.Graph: Required to know which graph to draw the selection box
+        :param event: Type - str: Name of the graph. Used to check for bin selection of the Sim. graph
+        :param objects: Type - list[object]: List of objects to search through. Either Roll or Bar objects.
+        :param prev_selection: Type - tuple[int, object]: The ID of the previous selection box and the previously selected object.
+                                                          - Only the ID is actually used atm.
+        :param offset: Type - tuple: Horizontal and vertical offset for hit detection search. Given as parameters to Object.is_hit(...) method
+        """
         selection_id = prev_selection[0]
         if selection_id:  # delete drawings 
             graph.delete_figure(selection_id)
+
         found = False
         print(f"Clicked {event}: {click}, \nLooking... ", end="")
 
@@ -420,7 +459,8 @@ class Mainframe:
                         self.convolution.selection_box_id = self.con_graph.draw_rectangle(hit_bin.hitbox[0], hit_bin.hitbox[1], 'magenta')
                         print(f'found: {hit_bin}\n')
 
-        elif click[0] > 0 and click[1] > 0:  # only search for objects if the click is in the graphing region
+        # only search for objects if the click is in the graphing region
+        elif click[0] > 0 and click[1] > 0:  
             for Object in objects:
                 if not found:
                     if Object.is_hit(click, xoffset=offset[0], yoffset=offset[1]):
@@ -692,7 +732,7 @@ class Convolution:
         highest_probability = max(self.conv_dist)
         self.highest_point = self.top_right[1] - 45
         self.scalar = self.highest_point / highest_probability
-        if self.number_of_dice > 4:
+        if self.number_of_dice > 14:
             self.trim_outcomes()
         bins = len(self.conv_dist)
         self.bin_width = self.top_right[0] // bins
@@ -1168,7 +1208,7 @@ class Bar:
                 color='magenta', font='_ 14 bold', text_location=sg.TEXT_LOCATION_LEFT
             )
         )
-        expected_rolls = int(int(self.conv.f.values['rolls']) * self.probability)
+        expected_rolls = round(int(self.conv.f.values['rolls']) * self.probability)
         self.conv.selected_bar_display_ids.append(self.graph.draw_text(
                 text=f"{expected_rolls} Expected Occurrences", location=(425, self.conv.top_right[1] - 12), 
                 color='black', font='_ 12 bold', text_location=sg.TEXT_LOCATION_RIGHT
