@@ -2,6 +2,7 @@ import random
 from typing import Self
 import PySimpleGUI as sg
 import numpy as np
+import webbrowser
 
 """
 The classes required for the Roll Dice simulation window.  The utilization of the classes is described below.
@@ -42,15 +43,176 @@ The figure below is a usage network, NOT a class structure tree.
 # 8888888888  Y88P    "Y8888  888  888  "Y888      888    888 "Y888888 888  888  "Y88888 888  "Y8888  888   
 #   
 # - A class that handles the events from the event loop in main
-# - Not Implemented.
 # ----------------------------------------------------------------------------------------------------------------------
 class EventHandler:
     def __init__(self, frame) -> None:
         self.mf = frame
+        self.logging = False
+        self.full_logging = False
 
-    def handle(self, event) -> None:
+
+    def error_popup(error, message, duration=5) -> None:
+        sg.popup_quick_message(f'\n{error}\n\n{message}\n', background_color='#1b1b1b', text_color='#fafafa', auto_close_duration=duration, grab_anywhere=True, keep_on_top=False)
+
+
+    def handle(self, event) -> bool:
         mf = self.mf
+        size = None
+
         # the code from inside the event loop goes here.
+        mf.sim_graph = mf.window['simulation graph']
+        mf.con_graph = mf.window['convolution graph']
+
+        # log events and handle closing
+        if event not in (sg.TIMEOUT_EVENT, sg.WIN_CLOSED):
+            if self.logging:
+                print(f'============ Event :: {event} : {mf.values[event] if event in mf.values else None} ==============')
+                if (self.full_logging == True or event == 'show values'):
+                    print('-------- Values Dictionary (key=value) --------')
+                    for key in mf.values:
+                        print(f'\'{key}\' : {mf.values[key]},')
+        if event in (None, 'exit', sg.WINDOW_CLOSED):
+            print("[LOG] Clicked Exit!")
+            mf.window.close()
+            return False
+
+        # if the event is a tuple, it's a hover-button
+        if isinstance(event, tuple):
+            # if the second item is one of the bound strings, then do the mouseover code
+            if event[1] in ('ENTER', 'EXIT'):
+                key = event[0]
+                image_tag = event[0][1]
+                if event[1] == 'ENTER':
+                    image_b64_data = getattr(mf.images, image_tag + '_hover')
+                    mf.window[key].update(data=image_b64_data)
+                if event[1] == 'EXIT':
+                    image_b64_data = getattr(mf.images, image_tag)
+                    mf.window[key].update(data=image_b64_data)
+            else:  # Image clicked
+                button_clicked = event[1]
+                if button_clicked == 'exit':
+                    print("[LOG] Clicked Exit!")
+                    mf.window.close()
+                    return False
+                elif button_clicked == 'menubar_CLT':
+                    webbrowser.open('https://mikeverwer.github.io/assets/docs/the-clt.html')
+                elif button_clicked == 'author':
+                    webbrowser.open('https://mikeverwer.github.io/')
+                elif button_clicked == 'minimize':
+                    pass
+
+        elif event == 'resize':
+            if size != mf.window.size:
+                mf.resize_graphs()
+                size = mf.window.size
+
+        elif event == 'SaveSettings':
+            filename = sg.popup_get_file('Save Settings', save_as=True, no_window=True)
+            mf.window.SaveToDisk(filename)
+            # save(values)
+        elif event == 'LoadSettings':
+            filename = sg.popup_get_file('Load Settings', no_window=True)
+            mf.window.LoadFromDisk(filename)
+            # load(form)
+
+        elif event == 'Clear':
+            mf.window['log'].update(value='')
+
+        elif event.startswith('face'):
+            mf.activate_slider(event=event)
+            mf.window['rolls'].set_focus()
+
+        elif event.startswith('lock'):
+            active_lock = int(event[-1])
+            mf.activate_lock(active_lock)
+
+        elif event == 'preset':
+            set_to_preset = mf.values[event]
+            mf.set_sliders_to(mf.presets[set_to_preset], reset_locks=True)
+
+        elif event == 'add preset' and mf.values['preset'] != '':
+            mf.add_preset(mf.values['preset'])
+
+        elif event == 'Randomize':
+            if False in mf.locks:  # At least 1 slider is unlocked
+                mf.die_distribution = mf.random_distribution(get_var=True)
+                mf.window['preset'].update(value='')
+                mf.window['Randomize'].set_focus()
+
+                mf.set_sliders_to(mf.die_distribution)
+
+            mf.die_distribution = [mf.values[f'face{i}'] for i in range(1, 7)]
+            mf.mean_and_deviation(update=True)
+
+        elif event == 'up' or event == 'down' or event == 'dice':
+            if event != 'dice':
+                delta = 1 if event == 'up' else -1
+                mf.dice_change(mf.dice + delta)
+            else:
+                try:
+                    mf.dice_change(value=mf.values[event])
+                except ValueError as ve:
+                    self.error_popup('Value Error', ve)
+
+        elif event == 'go':  # Run the show
+            # Get the number of dice to roll and rolls to perform
+            try:
+                if int(mf.values['dice']):
+                    # Run the simulation
+                    mf.simulate = True
+                    mf.sim = Simulation(mf)
+            except ValueError as ve:
+                mf.simulate = False
+                self.error_popup('Value Error', ve)
+        
+        elif event == 'Pause' and mf.sim:
+            mf.simulate = not mf.simulate
+            new_text = 'Pause' if mf.simulate else "Play"
+            mf.window['Pause'].update(text=new_text)
+
+        elif event == 'convolution graph':
+            try:
+                hit_bin: Bar = None
+                mf.convolution.selection_box_id, hit_bin = mf.activate_hit_detect(
+                    click=mf.values[event], graph=mf.con_graph, event=event,
+                    objects=mf.convolution.bins, prev_selection=(mf.convolution.selection_box_id, None),
+                    offset=(0, 15)
+                )
+            except TypeError:
+                mf.convolution.selection_box_id = None
+        
+        elif event == 'simulation graph' and mf.sim:
+            try:
+                hit_roll: Roll = None
+                mf.sim.selection_box_id, hit_roll = mf.activate_hit_detect(
+                    click=mf.values[event], graph=mf.sim_graph, event=event, 
+                    objects=mf.sim.rolls, prev_selection=(mf.sim.selection_box_id, None)
+                )
+                mf.sim.displaying_roll = True
+            except TypeError:
+                mf.sim.selection_box_id = None
+                mf.sim.displaying_roll = False
+                mf.sim.delete_ids()
+
+        
+        ######################################
+        # Animation
+        ######################################
+        if mf.simulate:
+            if mf.sim.trial_number <= mf.sim.number_of_rolls:
+                mf.sim.roll_dice(mf.sim.trial_number)
+                mf.sim.trial_number += 1
+            else:
+                mf.simulate = False
+                max_bin = None
+                max_length = 0
+                for bin, outcomes in mf.sim.bin_dictionary.items():
+                    if len(outcomes) > max_length:
+                        max_bin = bin
+                        max_length = len(outcomes)
+                self.error_popup('Finished!', f'The sum with the most outcomes was {max_bin},\nwhich was rolled {max_length} times.', duration=4)
+
+        return True  # tells the event loop to run again
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -76,6 +238,9 @@ class Mainframe:
         self.values = values
         
         # Self
+        # Initialize the maestro, an EventHandler
+        self.maestro: EventHandler = None
+
         # Initializing frame variables
         self.preset_list = ['Fair', 'Sloped', 'Valley', 'Hill', 'Alternating']
         self.presets = {

@@ -65,7 +65,7 @@ def main():
     mf = cl.Mainframe(images)  # MainFrame object, see classes.py
     window = make.Mainframe_func(sg, images, theme='Default1', frame=mf)
     size = mf.window.size
-    # mf.resize_graphs()
+    
 
     logging = False
     full_logging = False
