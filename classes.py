@@ -116,7 +116,7 @@ class EventHandler:
                     mf.window.close()
                     return False
                 elif button_clicked == 'menubar_CLT':
-                    webbrowser.open('https://mikeverwer.github.io/assets/docs/the-clt.html')
+                    webbrowser.open('https://mikeverwer.github.io/articles/the-clt.html')
                 elif button_clicked == 'author':
                     webbrowser.open('https://mikeverwer.github.io/')
                 elif button_clicked == 'minimize':
