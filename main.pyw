@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # .requirements
-import PySimpleGUI as sg
 import random
+from typing import Self
 import numpy as np
 import webbrowser
 # required files
+import PySimpleGUI as sg
 import classes as cl
 import make_window as make
 
